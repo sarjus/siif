@@ -308,8 +308,11 @@ export default function ReviewerApplicationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'application' | 'assessment'>('application');
+  const isSubmitted = reviewStatus === 'completed';
+  const isInProgress = reviewStatus === 'in_progress';
 
   const params = useParams();
   const router = useRouter();
@@ -360,6 +363,7 @@ export default function ReviewerApplicationPage() {
 
   const updateCriterion = (key: keyof ReviewData, field: keyof CriterionScore, value: any) => {
     setSaved(false);
+    setSubmitted(false);
     setReview((prev) => ({ ...prev, [key]: { ...(prev[key] as CriterionScore), [field]: value } }));
   };
 
@@ -369,12 +373,13 @@ export default function ReviewerApplicationPage() {
     value: string
   ) => {
     setSaved(false);
+    setSubmitted(false);
     setReview((prev) => ({ ...prev, [key]: { ...(prev[key] as SectionFeedback), [field]: value } }));
   };
 
   const handleSave = async (finalSubmit = false) => {
     if (!assignmentId) return;
-    setSaving(true); setSaved(false);
+    setSaving(true); setSaved(false); setSubmitted(false);
     try {
       const payload = { ...review, __structured: true };
       const newStatus = finalSubmit ? 'completed' : (reviewStatus === 'pending' ? 'in_progress' : reviewStatus);
@@ -388,7 +393,11 @@ export default function ReviewerApplicationPage() {
         .eq('id', assignmentId);
       if (updateErr) throw updateErr;
       setReviewStatus(newStatus);
-      setSaved(true);
+      if (finalSubmit) {
+        setSubmitted(true);
+      } else {
+        setSaved(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save review');
     } finally {
@@ -435,15 +444,15 @@ export default function ReviewerApplicationPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => handleSave(false)} disabled={saving || !assignmentId}
+            <button onClick={() => handleSave(false)} disabled={saving || !assignmentId || isSubmitted}
               className="px-4 py-2 rounded-lg border-2 border-[#FF3B3B] text-[#FF3B3B] font-semibold text-sm hover:bg-red-50 disabled:opacity-50 transition-all">
               {saving ? 'Saving…' : 'Save Draft'}
             </button>
             <button onClick={() => handleSave(true)}
-              disabled={saving || !assignmentId || !review.recommendation || !review.finalComment.trim()}
-              className="px-4 py-2 rounded-lg bg-[#FF3B3B] text-white font-semibold text-sm hover:bg-red-700 disabled:opacity-50 transition-all"
-              title={!review.recommendation ? 'Select a recommendation to submit' : !review.finalComment.trim() ? 'Add a final comment to submit' : ''}>
-              Submit Final Review
+              disabled={saving || !assignmentId || !review.recommendation || !review.finalComment.trim() || isSubmitted}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${isSubmitted ? 'bg-green-500 text-white cursor-default hover:bg-green-500' : 'bg-[#FF3B3B] text-white hover:bg-red-700 disabled:opacity-50'}`}
+              title={isSubmitted ? 'Review already submitted' : !review.recommendation ? 'Select a recommendation to submit' : !review.finalComment.trim() ? 'Add a final comment to submit' : ''}>
+              {isSubmitted ? '✓ Submitted' : saving ? 'Submitting…' : 'Submit Final Review'}
             </button>
           </div>
         </div>
@@ -463,9 +472,15 @@ export default function ReviewerApplicationPage() {
         {error && (
           <div className="mb-5 p-4 rounded-lg text-sm" style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}>{error}</div>
         )}
-        {saved && (
-          <div className="mb-5 p-3 rounded-lg text-sm font-medium" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>
-            ✓ Review saved successfully
+        {submitted && (
+          <div className="mb-5 p-4 rounded-lg text-sm font-medium" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700 }}>✓ Review submitted successfully!</div>
+            <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.9 }}>Your assessment has been recorded and the application status is now marked as completed.</div>
+          </div>
+        )}
+        {saved && !submitted && (
+          <div className="mb-5 p-3 rounded-lg text-sm font-medium" style={{ backgroundColor: '#E3F2FD', color: '#1565C0' }}>
+            ✓ Draft saved — you can continue editing
           </div>
         )}
 

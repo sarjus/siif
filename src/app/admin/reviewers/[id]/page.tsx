@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -252,9 +252,8 @@ export default function ReviewerDetailPage() {
                   </tr>
                 ) : (
                   filtered.map((a) => (
-                    <>
+                    <Fragment key={a.id}>
                       <tr
-                        key={a.id}
                         style={{
                           borderBottom: expandedId === a.id ? 'none' : '1px solid #E5E5E5',
                         }}
@@ -327,7 +326,6 @@ export default function ReviewerDetailPage() {
                       </tr>
                       {expandedId === a.id && a.review_comments && (
                         <tr
-                          key={`${a.id}-comments`}
                           style={{
                             borderBottom: '1px solid #E5E5E5',
                             backgroundColor: '#F0F8FF',
@@ -358,7 +356,7 @@ export default function ReviewerDetailPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))
                 )}
               </tbody>
