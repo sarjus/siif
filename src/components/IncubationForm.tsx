@@ -462,7 +462,7 @@ export default function IncubationForm() {
               lineHeight: '1.6',
             }}
           >
-            Join SIIF - Startups Valley TBI. Fill out this comprehensive application form to be considered for our incubation program.
+            Join SIIF. Fill out this comprehensive application form to be considered for our incubation program.
           </p>
         </motion.div>
 
