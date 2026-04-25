@@ -10,7 +10,7 @@ export const Hero = () => {
     <section className="relative min-h-[90vh] flex flex-col justify-center pt-24 overflow-hidden bg-white">
 
       <div className="container relative z-10 mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1030px_1fr] gap-4 items-start">
+        <div className="relative z-20 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] gap-4 items-start">
 
           <div className="flex flex-col space-y-8 pt-12">
             <h1
@@ -31,15 +31,15 @@ export const Hero = () => {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Where Campus Ideas <br />
-                Become Real
+                Build from Campus <br />
+                Scale to 
               </span>{" "}
               <span style={{
                 background: 'linear-gradient(90deg, #2AA0D3 0%, #F00 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Companies
+                World
               </span>
               <span style={{
                 background: 'linear-gradient(180deg, #5D5B5B 0%, #D6CCCC 89.74%)',
@@ -51,16 +51,27 @@ export const Hero = () => {
             </h1>
 
             <p
-              className="text-lg leading-relaxed max-w-md"
+              className="max-w-2xl rounded-2xl border border-zinc-200/80 bg-white/85 px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.06)] backdrop-blur-sm"
               style={{
-                color: '#565555',
                 fontFamily: '"Hanken Grotesk", sans-serif',
-                fontSize: 'clamp(0.95rem, 1.8vw, 16px)',
+                fontSize: 'clamp(0.98rem, 1.5vw, 18px)',
                 fontWeight: 400,
-                lineHeight: '1.6',
+                lineHeight: '1.7',
               }}
             >
-              Empowering students, innovators, and entrepreneurs to transform ideas into scalable startups.
+              <span style={{ color: '#565555' }}>
+                SIIF helps innovators, students, and entrepreneurs transform bold ideas into scalable startups through
+              </span>{" "}
+              <span
+                style={{
+                  background: 'linear-gradient(90deg, #700333 0%, #E81116 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 600,
+                }}
+              >
+                incubation, mentorship, infrastructure, and growth support.
+              </span>
             </p>
 
             <div>
@@ -98,7 +109,7 @@ export const Hero = () => {
             </Button>
 
             <div
-              className="text-right ml-auto mt-6 md:mt-12 pb-8"
+              className="text-right ml-auto mt-6 md:mt-12 pb-8 max-w-[420px]"
               style={{
                 width: 'auto',
                 height: 'auto',
@@ -116,8 +127,8 @@ export const Hero = () => {
                   letterSpacing: '-1.28px',
                 }}
               >
-                SJCET Palai <br />
-                <span className="whitespace-nowrap">Kerala's Startup Engine</span>
+                SIIF Incubator<br />
+                <span>Kerala’s most founder-first campus startup ecosystem</span>
               </h3>
             </div>
           </div>
@@ -125,7 +136,7 @@ export const Hero = () => {
 
         {/* Rocket + Trail Group */}
         <motion.div
-          className="absolute top-[50%] md:top-[44%] left-[10%] md:left-[20%] z-10 pointer-events-none flex items-center"
+          className="absolute top-[50%] md:top-[44%] left-[10%] md:left-[20%] z-0 pointer-events-none flex items-center"
           initial={{ x: -500, y: 200, opacity: 0 }}
           animate={{ x: 0, y: 0, opacity: 1 }}
           transition={{ duration: 1.5, ease: "easeOut" }}
@@ -179,7 +190,7 @@ export const Hero = () => {
               maxWidth: '100%',
             }}
           >
-            Recognized Innovation Ecosystem · Startup Support Platform · Mentorship & Networking · Funding Access Guidance · Section 8 Company
+            Powered by SJCET Palai | Innovation Driven | Founder Focused | Future Ready
           </p>
         </div>
       </div>
