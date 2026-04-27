@@ -6,6 +6,11 @@ import { Footer } from "@/components/Footer";
 export const metadata: Metadata = {
   title: "SIIF | Launch Your Startup Journey",
   description: "SSCBS Innovation and Incubation Foundation",
+  icons: {
+    icon: "/assets/SIIF Logo Icon.png",
+    shortcut: "/assets/SIIF Logo Icon.png",
+    apple: "/assets/SIIF Logo Icon.png",
+  },
 };
 
 export default function RootLayout({
