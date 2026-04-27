@@ -77,13 +77,21 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-black/5 bg-white/80 backdrop-blur-md">
       <div className="w-full h-auto py-4 flex items-center justify-between px-5 md:px-12 bg-white/80 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center gap-2 md:gap-3">
+            <Image
+              src="/assets/College Logo.png"
+              alt="SJCET College Logo"
+              width={360}
+              height={200}
+              className="h-10 md:h-12 lg:h-14 w-auto max-w-[220px] object-contain"
+              priority
+            />
             <Image
               src="/assets/SIIF Logo.png"
               alt="SIIF Logo"
-              width={80}
-              height={40}
-              className="object-contain"
+              width={160}
+              height={80}
+              className="h-10 md:h-12 lg:h-14 w-auto object-contain"
               priority
             />
           </Link>

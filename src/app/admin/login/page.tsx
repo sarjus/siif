@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -54,6 +55,24 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-[#700333] to-[#E81116] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-xl p-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Image
+              src="/assets/College Logo.png"
+              alt="SJCET College Logo"
+              width={360}
+              height={200}
+              className="h-10 w-auto max-w-[180px] object-contain"
+              priority
+            />
+            <Image
+              src="/assets/SIIF Logo.png"
+              alt="SIIF Logo"
+              width={80}
+              height={40}
+              className="h-10 w-auto max-w-[110px] object-contain"
+              priority
+            />
+          </div>
           <h1 
             className="text-3xl font-bold text-center mb-2"
             style={{

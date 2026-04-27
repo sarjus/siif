@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function ReviewerLogin() {
   const [email, setEmail] = useState('');
@@ -65,23 +66,23 @@ export default function ReviewerLogin() {
       <div className="w-full max-w-md">
         {/* Logo / Branding */}
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-            style={{ backgroundColor: '#FF3B3B' }}
-          >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 11l3 3L22 4" />
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-            </svg>
+          <div className="inline-flex items-center justify-center gap-3 mb-5">
+            <Image
+              src="/assets/College Logo.png"
+              alt="SJCET College Logo"
+              width={360}
+              height={200}
+              className="h-10 w-auto max-w-[180px] object-contain"
+              priority
+            />
+            <Image
+              src="/assets/SIIF Logo.png"
+              alt="SIIF Logo"
+              width={80}
+              height={40}
+              className="h-10 w-auto max-w-[110px] object-contain"
+              priority
+            />
           </div>
           <h1
             className="text-3xl font-bold text-white mb-1"

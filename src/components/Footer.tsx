@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 export const Footer = () => {
   return (
@@ -11,6 +12,22 @@ export const Footer = () => {
 
           {/* Logo & Tagline */}
           <div className="flex flex-col w-full lg:w-auto">
+            <div className="flex items-center gap-3 mb-4">
+              <Image
+                src="/assets/College Logo.png"
+                alt="SJCET College Logo"
+                width={360}
+                height={200}
+                className="h-14 w-auto max-w-[260px] lg:h-16 object-contain"
+              />
+              <Image
+                src="/assets/SIIF Logo.png"
+                alt="SIIF Logo"
+                width={192}
+                height={96}
+                className="h-14 w-auto max-w-[180px] lg:h-16 object-contain"
+              />
+            </div>
             <h2 className="text-[clamp(80px,12vw,170px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken">
               SIIF.
             </h2>
