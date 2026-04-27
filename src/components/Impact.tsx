@@ -40,16 +40,17 @@ export const Impact = () => {
           <div className="flex flex-col gap-4 md:gap-6 max-w-full lg:max-w-[848px]">
             <div className="flex flex-col gap-2">
               <h2 className="text-[#565555] font-hanken font-semibold text-[44px] md:text-[64px] leading-[87.145%] tracking-[-2.56px]">
-                Our Impact
+                Our Momentum
               </h2>
               <p className="text-[#848484] font-hanken font-semibold text-[24px] md:text-[32px] leading-[87.145%] tracking-[-1.28px]">
-                Proof over promises.
+                Built with intent. Growing with founders.
               </p>
             </div>
 
             <p className="text-[#989898] font-hanken font-medium text-[20px] md:text-[32px] leading-[115.967%] tracking-[-1.28px]">
-              More than 50 startups have walked through these doors. They&apos;ve raised funding, landed customers, and built teams. Some are still early. Some are scaling fast. All of them started exactly where you are now.
+             SIIF is a newly launched incubation ecosystem empowering startups, student innovators, and first-time founders with mentorship, workspace, and opportunities to turn ideas into successful ventures. The next success stories will begin here.
             </p>
+            
           </div>
 
           <div className="relative w-full lg:w-auto flex flex-col items-center lg:items-end gap-12 lg:gap-4 mt-12 lg:mt-0 lg:pr-10">
