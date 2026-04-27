@@ -31,8 +31,8 @@ export const Hero = () => {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                Build from Campus <br />
-                Scale to 
+                Build on Campus <br />
+                Launch to the 
               </span>{" "}
               <span style={{
                 background: 'linear-gradient(90deg, #2AA0D3 0%, #F00 100%)',
@@ -60,7 +60,7 @@ export const Hero = () => {
               }}
             >
               <span style={{ color: '#565555' }}>
-                SIIF helps innovators, students, and entrepreneurs transform bold ideas into scalable startups through
+                SIIF is the startup incubator of St. Joseph&apos;s College of Engineering and Technology, Palai.
               </span>{" "}
               <span
                 style={{
@@ -70,7 +70,7 @@ export const Hero = () => {
                   fontWeight: 600,
                 }}
               >
-                incubation, mentorship, infrastructure, and growth support.
+                We help founders validate ideas, build products, and scale through mentoring, infrastructure, funding access, and community.
               </span>
             </p>
 
@@ -111,7 +111,7 @@ export const Hero = () => {
                 }}
               >
                 SIIF Incubator<br />
-                <span>Kerala’s most founder-first campus startup ecosystem</span>
+                <span>From first prototype to market-ready startup.</span>
               </h3>
             </div>
           </div>
