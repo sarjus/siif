@@ -74,39 +74,22 @@ export const Hero = () => {
               </span>
             </p>
 
-            <div>
-              <Link href="/apply-incubation">
-                <Button
-                  size="lg"
-                  className="text-white px-10 py-7 text-lg font-bold shadow-xl transition-all hover:scale-105 active:scale-95 border-none"
-                  style={{
-                    fontFamily: 'var(--font-hanken-grotesk)',
-                    borderRadius: '74px',
-                    background: 'radial-gradient(76.17% 53.63% at 47.52% 111.03%, #8F1D5D 0%, rgba(102, 102, 102, 0.00) 100%), linear-gradient(90deg, #700333 0%, #E81116 100%)'
-                  }}
-                >
-                  Apply for Incubation
-                </Button>
-              </Link>
-            </div>
           </div>
 
           <div className="flex flex-col items-end space-y-6 lg:pt-28">
-            <Button
-              variant="outline"
-              className="bg-zinc-100/80 border-none rounded-full px-6 py-4 shadow-sm hover:bg-zinc-200"
-              style={{
-                color: '#070707',
-                fontFamily: '"Hanken Grotesk", sans-serif',
-                fontSize: 'clamp(0.875rem, 2vw, 20px)',
-                fontWeight: 600,
-                lineHeight: '98.155%',
-                letterSpacing: '-0.8px',
-                height: 'auto'
-              }}
-            >
-              Explore Startups
-            </Button>
+            <Link href="/apply-incubation">
+              <Button
+                size="lg"
+                className="text-white px-8 py-5 text-base md:text-lg font-bold shadow-xl transition-all hover:scale-105 active:scale-95 border-none"
+                style={{
+                  fontFamily: 'var(--font-hanken-grotesk)',
+                  borderRadius: '74px',
+                  background: 'radial-gradient(76.17% 53.63% at 47.52% 111.03%, #8F1D5D 0%, rgba(102, 102, 102, 0.00) 100%), linear-gradient(90deg, #700333 0%, #E81116 100%)'
+                }}
+              >
+                Apply for Incubation
+              </Button>
+            </Link>
 
             <div
               className="text-right ml-auto mt-6 md:mt-12 pb-8 max-w-[420px]"
