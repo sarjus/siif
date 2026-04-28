@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, formatApplicationNumber } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -433,6 +433,9 @@ export default function ReviewerApplicationPage() {
             <h1 className="text-xl font-bold" style={{ color: '#1a1a1a' }}>
               {application?.business_name ?? 'Application'}
             </h1>
+            <p style={{ fontSize: '12px', color: '#8A8A8A', marginTop: '2px' }}>
+              Application Number: {application ? formatApplicationNumber(application.id) : 'N/A'}
+            </p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span style={{ fontSize: '13px', color: '#6B7280' }}>{application?.lead_name}</span>
               <span className="px-2 py-0.5 rounded-full text-white text-xs font-semibold" style={{ backgroundColor: categoryColor }}>

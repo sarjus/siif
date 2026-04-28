@@ -94,6 +94,15 @@ export function Navbar() {
               className="h-10 md:h-12 lg:h-14 w-auto object-contain"
               priority
             />
+            <span
+              className="leading-none text-[1.55rem] md:text-[2rem] lg:text-[2.4rem] font-semibold tracking-tight"
+              style={{
+                color: '#5D5B5B',
+                fontFamily: '"Hanken Grotesk", sans-serif',
+              }}
+            >
+              SIIF.
+            </span>
           </Link>
         </div>
 

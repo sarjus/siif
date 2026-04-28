@@ -6,17 +6,39 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 // Create Supabase client for client-side operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const formatApplicationNumber = (id: string) => {
+  const compact = id.replace(/-/g, '').toUpperCase();
+  return `SIIF-${compact.slice(-10)}`;
+};
+
 // Supabase operations for incubation applications
 export const incubationApi = {
   // Submit application
-  async submitApplication(formData: any) {
+  async submitApplication(formData: any, applicationId?: string) {
     try {
       console.log('Attempting to insert form data with keys:', Object.keys(formData));
-      
-      const { data, error } = await supabase
-        .from('applications')
-        .insert([formData])
-        .select();
+
+      let data;
+      let error;
+
+      if (applicationId) {
+        const result = await supabase
+          .from('applications')
+          .update({ ...formData, updated_at: new Date().toISOString() })
+          .eq('id', applicationId)
+          .select();
+        data = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase
+          .from('applications')
+          .insert([formData])
+          .select();
+        data = result.data;
+        error = result.error;
+      }
       
       if (error) {
         console.error('Supabase error details:', {
@@ -47,6 +69,86 @@ export const incubationApi = {
 
     if (error) throw error;
     return data;
+  },
+
+  // Replace references for an application (used when resubmitting a draft)
+  async replaceReferences(applicationId: string, references: object[]) {
+    const { error: deleteError } = await supabase
+      .from('application_references')
+      .delete()
+      .eq('application_id', applicationId);
+
+    if (deleteError) throw deleteError;
+
+    if (references.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('application_references')
+      .insert(references)
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Save draft application (insert new or update existing)
+  async saveDraft(formData: any, applicationId?: string) {
+    if (applicationId) {
+      const { data, error } = await supabase
+        .from('applications')
+        .update({ ...formData, status: 'draft', updated_at: new Date().toISOString() })
+        .eq('id', applicationId)
+        .select();
+
+      if (error) throw error;
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from('applications')
+      .insert([{ ...formData, status: 'draft' }])
+      .select();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Lookup by application number + mobile number for resume/status checks
+  async getByApplicationNumberAndPhone(applicationNumber: string, mobilePhone: string) {
+    const trimmedNumber = applicationNumber.trim();
+    const normalizedNumber = trimmedNumber.toUpperCase();
+    const trimmedPhone = mobilePhone.trim();
+
+    if (UUID_REGEX.test(trimmedNumber)) {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('id', trimmedNumber)
+        .eq('mobile_phone', trimmedPhone)
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('mobile_phone', trimmedPhone)
+      .order('submitted_at', { ascending: false });
+
+    if (error) throw error;
+
+    const match = (data || []).find((application) => {
+      const shortNumber = formatApplicationNumber(application.id).toUpperCase();
+      return shortNumber === normalizedNumber || application.id.toUpperCase() === normalizedNumber;
+    });
+
+    if (!match) {
+      throw new Error('Application not found for the provided Application Number and Mobile Phone.');
+    }
+
+    return match;
   },
 
   // Get application by ID
@@ -126,7 +228,7 @@ export const incubationApi = {
   // Get references for application
   async getReferences(applicationId: string) {
     const { data, error } = await supabase
-      .from('references')
+      .from('application_references')
       .select('*')
       .eq('application_id', applicationId)
       .order('reference_number', { ascending: true });

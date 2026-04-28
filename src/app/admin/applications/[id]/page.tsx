@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, formatApplicationNumber } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AdminNav from '@/components/AdminNav';
@@ -393,7 +393,7 @@ export default function ApplicationDetail() {
                 {application.business_name}
               </h1>
               <p style={{ color: '#8A8A8A', fontSize: '14px', marginTop: '4px' }}>
-                ID: {application.id}
+                Application Number: {formatApplicationNumber(application.id)}
               </p>
             </div>
             <div className="text-right">

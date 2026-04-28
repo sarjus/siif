@@ -7,12 +7,12 @@ import { motion } from "framer-motion";
 
 export const Hero = () => {
   return (
-    <section className="relative min-h-[90vh] flex flex-col justify-center pt-24 overflow-hidden bg-white">
+    <section className="relative min-h-[90vh] flex flex-col justify-center pt-12 md:pt-20 overflow-hidden bg-white">
 
       <div className="container relative z-10 mx-auto px-4 md:px-6">
         <div className="relative z-20 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] gap-4 items-start">
 
-          <div className="flex flex-col space-y-8 pt-12">
+          <div className="flex flex-col space-y-8 pt-2 md:pt-6">
             <h1
               className="tracking-tighter"
               style={{
@@ -51,26 +51,16 @@ export const Hero = () => {
             </h1>
 
             <p
-              className="max-w-2xl rounded-2xl border border-zinc-200/80 bg-white/85 px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.06)] backdrop-blur-sm"
+              className="max-w-2xl"
               style={{
                 fontFamily: '"Hanken Grotesk", sans-serif',
-                fontSize: 'clamp(0.98rem, 1.5vw, 18px)',
-                fontWeight: 400,
-                lineHeight: '1.7',
+                fontSize: 'clamp(1.05rem, 1.7vw, 19px)',
+                fontWeight: 500,
+                lineHeight: '1.6',
               }}
             >
               <span style={{ color: '#565555' }}>
                 SIIF is the startup incubator of St. Joseph&apos;s College of Engineering and Technology, Palai.
-              </span>{" "}
-              <span
-                style={{
-                  background: 'linear-gradient(90deg, #700333 0%, #E81116 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontWeight: 600,
-                }}
-              >
-                We help founders validate ideas, build products, and scale through mentoring, infrastructure, funding access, and community.
               </span>
             </p>
 

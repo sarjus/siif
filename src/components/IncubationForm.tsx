@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { incubationApi } from '@/lib/supabase';
+import { incubationApi, formatApplicationNumber } from '@/lib/supabase';
 
 interface FormData {
   businessName: string;
@@ -69,74 +69,207 @@ interface FormData {
   place: string;
 }
 
+const initialFormData: FormData = {
+  businessName: '',
+  leadName: '',
+  sjcetAssociated: '',
+  sjcetAssociationType: '',
+  age: '',
+  resPhone: '',
+  mobilePhone: '',
+  email: '',
+  postalAddress: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: '',
+  qualification: '',
+  specialization: '',
+  institute: '',
+  stageOfStartup: '',
+  legalStatus: '',
+  sectorDomain: [],
+  natureOfBusiness: '',
+  innovationCategory: '',
+  businessDescription: '',
+  entrepreneurMotivation: '',
+  teamDetails: '',
+  companyDescription: '',
+  productNovelty: '',
+  competitors: '',
+  competitiveAdvantage: '',
+  marketSize: '',
+  revenueModel: '',
+  machineryRequired: '',
+  machineryDetails: '',
+  marketSurvey: '',
+  marketSurveyDetails: '',
+  researchValidation: '',
+  projectCost: '',
+  preOperativeExpenses: '',
+  prototypeExpenses: '',
+  testMarketing: '',
+  equipment: '',
+  workingCapital: '',
+  otherRequirements: '',
+  servicesExpected: [],
+  laboratoryAccess: false,
+  libraryAccess: false,
+  technicalConsulting: false,
+  otherServices: '',
+  reference1Name: '',
+  reference1Organization: '',
+  reference1Address: '',
+  reference1Phone: '',
+  reference1Email: '',
+  reference2Name: '',
+  reference2Organization: '',
+  reference2Address: '',
+  reference2Phone: '',
+  reference2Email: '',
+  declaration: false,
+  date: '',
+  place: '',
+};
+
+const formSections = [
+  'Founder Details',
+  'Startup Profile',
+  'Market & Validation',
+  'Cost & References',
+  'Declaration & Submit',
+];
+
+const toSubmissionData = (formData: FormData, status: string) => ({
+  business_name: formData.businessName,
+  lead_name: formData.leadName,
+  sjcet_associated: formData.sjcetAssociated,
+  sjcet_association_type: formData.sjcetAssociationType,
+  age: formData.age ? parseInt(formData.age) : null,
+  residential_phone: formData.resPhone,
+  mobile_phone: formData.mobilePhone,
+  email: formData.email,
+  postal_address: formData.postalAddress,
+  city: formData.city,
+  state: formData.state,
+  postal_code: formData.postalCode,
+  country: formData.country,
+  qualification: formData.qualification,
+  specialization: formData.specialization,
+  institute: formData.institute,
+  stage_of_startup: formData.stageOfStartup,
+  legal_status: formData.legalStatus,
+  sector_domain: formData.sectorDomain,
+  nature_of_business: formData.natureOfBusiness,
+  innovation_category: formData.innovationCategory,
+  business_description: formData.businessDescription,
+  entrepreneurial_motivation: formData.entrepreneurMotivation,
+  team_details: formData.teamDetails,
+  company_description: formData.companyDescription,
+  product_novelty: formData.productNovelty,
+  competitors: formData.competitors,
+  competitive_advantage: formData.competitiveAdvantage,
+  market_size: formData.marketSize,
+  revenue_model: formData.revenueModel,
+  machinery_required: formData.machineryRequired,
+  machinery_details: formData.machineryDetails,
+  market_survey: formData.marketSurvey,
+  market_survey_details: formData.marketSurveyDetails,
+  research_validation: formData.researchValidation,
+  project_cost: formData.projectCost ? parseFloat(formData.projectCost) : null,
+  pre_operative_expenses: formData.preOperativeExpenses ? parseFloat(formData.preOperativeExpenses) : null,
+  prototype_expenses: formData.prototypeExpenses ? parseFloat(formData.prototypeExpenses) : null,
+  test_marketing: formData.testMarketing ? parseFloat(formData.testMarketing) : null,
+  equipment: formData.equipment ? parseFloat(formData.equipment) : null,
+  working_capital: formData.workingCapital ? parseFloat(formData.workingCapital) : null,
+  other_requirements: formData.otherRequirements ? parseFloat(formData.otherRequirements) : null,
+  laboratory_access: formData.laboratoryAccess,
+  library_access: formData.libraryAccess,
+  technical_consulting: formData.technicalConsulting,
+  services_expected: formData.servicesExpected,
+  other_services: formData.otherServices,
+  declaration: formData.declaration,
+  declaration_date: formData.date || null,
+  declaration_place: formData.place,
+  status,
+});
+
+const fromApplicationData = (application: any): FormData => ({
+  businessName: application.business_name || '',
+  leadName: application.lead_name || '',
+  sjcetAssociated: application.sjcet_associated || '',
+  sjcetAssociationType: application.sjcet_association_type || '',
+  age: application.age ? String(application.age) : '',
+  resPhone: application.residential_phone || '',
+  mobilePhone: application.mobile_phone || '',
+  email: application.email || '',
+  postalAddress: application.postal_address || '',
+  city: application.city || '',
+  state: application.state || '',
+  postalCode: application.postal_code || '',
+  country: application.country || '',
+  qualification: application.qualification || '',
+  specialization: application.specialization || '',
+  institute: application.institute || '',
+  stageOfStartup: application.stage_of_startup || '',
+  legalStatus: application.legal_status || '',
+  sectorDomain: Array.isArray(application.sector_domain) ? application.sector_domain : [],
+  natureOfBusiness: application.nature_of_business || '',
+  innovationCategory: application.innovation_category || '',
+  businessDescription: application.business_description || '',
+  entrepreneurMotivation: application.entrepreneurial_motivation || '',
+  teamDetails: application.team_details || '',
+  companyDescription: application.company_description || '',
+  productNovelty: application.product_novelty || '',
+  competitors: application.competitors || '',
+  competitiveAdvantage: application.competitive_advantage || '',
+  marketSize: application.market_size || '',
+  revenueModel: application.revenue_model || '',
+  machineryRequired: application.machinery_required || '',
+  machineryDetails: application.machinery_details || '',
+  marketSurvey: application.market_survey || '',
+  marketSurveyDetails: application.market_survey_details || '',
+  researchValidation: application.research_validation || '',
+  projectCost: application.project_cost ? String(application.project_cost) : '',
+  preOperativeExpenses: application.pre_operative_expenses ? String(application.pre_operative_expenses) : '',
+  prototypeExpenses: application.prototype_expenses ? String(application.prototype_expenses) : '',
+  testMarketing: application.test_marketing ? String(application.test_marketing) : '',
+  equipment: application.equipment ? String(application.equipment) : '',
+  workingCapital: application.working_capital ? String(application.working_capital) : '',
+  otherRequirements: application.other_requirements ? String(application.other_requirements) : '',
+  servicesExpected: Array.isArray(application.services_expected) ? application.services_expected : [],
+  laboratoryAccess: !!application.laboratory_access,
+  libraryAccess: !!application.library_access,
+  technicalConsulting: !!application.technical_consulting,
+  otherServices: application.other_services || '',
+  reference1Name: '',
+  reference1Organization: '',
+  reference1Address: '',
+  reference1Phone: '',
+  reference1Email: '',
+  reference2Name: '',
+  reference2Organization: '',
+  reference2Address: '',
+  reference2Phone: '',
+  reference2Email: '',
+  declaration: !!application.declaration,
+  date: application.declaration_date || '',
+  place: application.declaration_place || '',
+});
+
 export default function IncubationForm() {
-  const [formData, setFormData] = useState<FormData>({
-    businessName: '',
-    leadName: '',
-    sjcetAssociated: '',
-    sjcetAssociationType: '',
-    age: '',
-    resPhone: '',
-    mobilePhone: '',
-    email: '',
-    postalAddress: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: '',
-    qualification: '',
-    specialization: '',
-    institute: '',
-    stageOfStartup: '',
-    legalStatus: '',
-    sectorDomain: [],
-    natureOfBusiness: '',
-    innovationCategory: '',
-    businessDescription: '',
-    entrepreneurMotivation: '',
-    teamDetails: '',
-    companyDescription: '',
-    productNovelty: '',
-    competitors: '',
-    competitiveAdvantage: '',
-    marketSize: '',
-    revenueModel: '',
-    machineryRequired: '',
-    machineryDetails: '',
-    marketSurvey: '',
-    marketSurveyDetails: '',
-    researchValidation: '',
-    projectCost: '',
-    preOperativeExpenses: '',
-    prototypeExpenses: '',
-    testMarketing: '',
-    equipment: '',
-    workingCapital: '',
-    otherRequirements: '',
-    servicesExpected: [],
-    laboratoryAccess: false,
-    libraryAccess: false,
-    technicalConsulting: false,
-    otherServices: '',
-    reference1Name: '',
-    reference1Organization: '',
-    reference1Address: '',
-    reference1Phone: '',
-    reference1Email: '',
-    reference2Name: '',
-    reference2Organization: '',
-    reference2Address: '',
-    reference2Phone: '',
-    reference2Email: '',
-    declaration: false,
-    date: '',
-    place: '',
-  });
+  const [formData, setFormData] = useState<FormData>(initialFormData);
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [currentSection, setCurrentSection] = useState(0);
+  const [lookupApplicationNumber, setLookupApplicationNumber] = useState('');
+  const [lookupPhoneNumber, setLookupPhoneNumber] = useState('');
+  const [statusResult, setStatusResult] = useState<{ applicationNumber: string; status: string; updatedAt?: string } | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -175,9 +308,150 @@ export default function IncubationForm() {
     }));
   };
 
+  const buildReferencesPayload = (appId: string) => ([
+    {
+      application_id: appId,
+      reference_number: 1,
+      name: formData.reference1Name || null,
+      organization: formData.reference1Organization || null,
+      address: formData.reference1Address || null,
+      phone: formData.reference1Phone || null,
+      email: formData.reference1Email || null,
+    },
+    {
+      application_id: appId,
+      reference_number: 2,
+      name: formData.reference2Name || null,
+      organization: formData.reference2Organization || null,
+      address: formData.reference2Address || null,
+      phone: formData.reference2Phone || null,
+      email: formData.reference2Email || null,
+    },
+  ].filter(ref => ref.name || ref.organization || ref.email || ref.phone));
+
+  const sendApplicationEmail = async (payload: {
+    applicationNumber: string;
+    status: 'draft' | 'submitted';
+  }) => {
+    if (!formData.email) return;
+
+    try {
+      const response = await fetch('/api/notifications/application-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          leadName: formData.leadName,
+          businessName: formData.businessName,
+          applicationNumber: payload.applicationNumber,
+          status: payload.status,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Email API failed' }));
+        throw new Error(data.error || 'Unable to send email notification');
+      }
+    } catch (emailError) {
+      console.error('Email notification failed:', emailError);
+    }
+  };
+
+  const loadApplicationByLookup = async (showStatusOnly: boolean) => {
+    setError(null);
+    setNotice(null);
+    setStatusResult(null);
+
+    if (!lookupApplicationNumber.trim() || !lookupPhoneNumber.trim()) {
+      setError('Enter application number and phone number to continue.');
+      return;
+    }
+
+    try {
+      setStatusLoading(true);
+      const application = await incubationApi.getByApplicationNumberAndPhone(
+        lookupApplicationNumber.trim(),
+        lookupPhoneNumber.trim()
+      );
+
+      if (showStatusOnly) {
+        setStatusResult({
+          applicationNumber: formatApplicationNumber(application.id),
+          status: application.status || 'submitted',
+          updatedAt: application.updated_at || application.submitted_at,
+        });
+        setNotice('Application status fetched successfully.');
+        return;
+      }
+
+      const mapped = fromApplicationData(application);
+      const references = await incubationApi.getReferences(application.id);
+
+      if (references && references.length > 0) {
+        const reference1 = references.find((ref: any) => ref.reference_number === 1);
+        const reference2 = references.find((ref: any) => ref.reference_number === 2);
+        mapped.reference1Name = reference1?.name || '';
+        mapped.reference1Organization = reference1?.organization || '';
+        mapped.reference1Address = reference1?.address || '';
+        mapped.reference1Phone = reference1?.phone || '';
+        mapped.reference1Email = reference1?.email || '';
+        mapped.reference2Name = reference2?.name || '';
+        mapped.reference2Organization = reference2?.organization || '';
+        mapped.reference2Address = reference2?.address || '';
+        mapped.reference2Phone = reference2?.phone || '';
+        mapped.reference2Email = reference2?.email || '';
+      }
+
+      setFormData(mapped);
+      setApplicationId(application.id);
+      setCurrentSection(0);
+      setNotice('Draft loaded. Continue from any section and save or submit when ready.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to find application for the given details.');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setError(null);
+    setNotice(null);
+
+    if (!formData.businessName || !formData.leadName || !formData.mobilePhone) {
+      setError('To save draft, fill Business Name, Lead Name, and Mobile Phone.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const draftData = toSubmissionData(formData, 'draft');
+      const result = await incubationApi.saveDraft(draftData, applicationId || undefined);
+
+      if (result && result[0]) {
+        const appId = result[0].id;
+        const formattedApplicationNumber = formatApplicationNumber(appId);
+        setApplicationId(appId);
+        setLookupApplicationNumber(formattedApplicationNumber);
+        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId));
+        await sendApplicationEmail({
+          applicationNumber: formattedApplicationNumber,
+          status: 'draft',
+        });
+        setNotice(`Draft saved successfully. Your Application Number is ${formattedApplicationNumber}. A confirmation email has been sent.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save draft. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     
     // Validate required fields
     if (!formData.declaration) {
@@ -185,101 +459,27 @@ export default function IncubationForm() {
       return;
     }
 
-    if (!formData.businessName || !formData.leadName || !formData.email) {
-      setError('Please fill in all required fields (marked with *)');
+    if (!formData.businessName || !formData.leadName || !formData.email || !formData.mobilePhone) {
+      setError('Please fill in all required fields (Business Name, Lead Name, Email, Mobile Phone).');
       return;
     }
 
     try {
       setSubmitting(true);
-      
-      // Prepare data for submission (convert to snake_case for database)
-      const submissionData = {
-        business_name: formData.businessName,
-        lead_name: formData.leadName,
-        sjcet_associated: formData.sjcetAssociated,
-        sjcet_association_type: formData.sjcetAssociationType,
-        age: formData.age ? parseInt(formData.age) : null,
-        residential_phone: formData.resPhone,
-        mobile_phone: formData.mobilePhone,
-        email: formData.email,
-        postal_address: formData.postalAddress,
-        city: formData.city,
-        state: formData.state,
-        postal_code: formData.postalCode,
-        country: formData.country,
-        qualification: formData.qualification,
-        specialization: formData.specialization,
-        institute: formData.institute,
-        stage_of_startup: formData.stageOfStartup,
-        legal_status: formData.legalStatus,
-        sector_domain: formData.sectorDomain,
-        nature_of_business: formData.natureOfBusiness,
-        innovation_category: formData.innovationCategory,
-        business_description: formData.businessDescription,
-        entrepreneurial_motivation: formData.entrepreneurMotivation,
-        team_details: formData.teamDetails,
-        company_description: formData.companyDescription,
-        product_novelty: formData.productNovelty,
-        competitors: formData.competitors,
-        competitive_advantage: formData.competitiveAdvantage,
-        market_size: formData.marketSize,
-        revenue_model: formData.revenueModel,
-        machinery_required: formData.machineryRequired,
-        machinery_details: formData.machineryDetails,
-        market_survey: formData.marketSurvey,
-        market_survey_details: formData.marketSurveyDetails,
-        research_validation: formData.researchValidation,
-        project_cost: formData.projectCost ? parseFloat(formData.projectCost) : null,
-        pre_operative_expenses: formData.preOperativeExpenses ? parseFloat(formData.preOperativeExpenses) : null,
-        prototype_expenses: formData.prototypeExpenses ? parseFloat(formData.prototypeExpenses) : null,
-        test_marketing: formData.testMarketing ? parseFloat(formData.testMarketing) : null,
-        equipment: formData.equipment ? parseFloat(formData.equipment) : null,
-        working_capital: formData.workingCapital ? parseFloat(formData.workingCapital) : null,
-        other_requirements: formData.otherRequirements ? parseFloat(formData.otherRequirements) : null,
-        laboratory_access: formData.laboratoryAccess,
-        library_access: formData.libraryAccess,
-        technical_consulting: formData.technicalConsulting,
-        services_expected: formData.servicesExpected,
-        other_services: formData.otherServices,
-        declaration: formData.declaration,
-        declaration_date: formData.date,
-        declaration_place: formData.place
-      };
-      
-      // Submit to Supabase
-      const result = await incubationApi.submitApplication(submissionData);
+
+      const submissionData = toSubmissionData(formData, 'submitted');
+      const result = await incubationApi.submitApplication(submissionData, applicationId || undefined);
       console.log('Application submitted successfully:', result);
       
       if (result && result[0]) {
         const appId = result[0].id;
+        const formattedApplicationNumber = formatApplicationNumber(appId);
         setApplicationId(appId);
-
-        // Save references to application_references table
-        const referencesToInsert = [
-          {
-            application_id: appId,
-            reference_number: 1,
-            name: formData.reference1Name || null,
-            organization: formData.reference1Organization || null,
-            address: formData.reference1Address || null,
-            phone: formData.reference1Phone || null,
-            email: formData.reference1Email || null,
-          },
-          {
-            application_id: appId,
-            reference_number: 2,
-            name: formData.reference2Name || null,
-            organization: formData.reference2Organization || null,
-            address: formData.reference2Address || null,
-            phone: formData.reference2Phone || null,
-            email: formData.reference2Email || null,
-          },
-        ].filter(ref => ref.name || ref.organization || ref.email || ref.phone);
-
-        if (referencesToInsert.length > 0) {
-          await incubationApi.saveReferences(referencesToInsert);
-        }
+        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId));
+        await sendApplicationEmail({
+          applicationNumber: formattedApplicationNumber,
+          status: 'submitted',
+        });
       }
       
       setSubmitted(true);
@@ -289,68 +489,12 @@ export default function IncubationForm() {
       setTimeout(() => {
         setSubmitted(false);
         setApplicationId(null);
-        setFormData({
-          businessName: '',
-          leadName: '',
-          sjcetAssociated: '',
-          sjcetAssociationType: '',
-          age: '',
-          resPhone: '',
-          mobilePhone: '',
-          email: '',
-          postalAddress: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          country: '',
-          qualification: '',
-          specialization: '',
-          institute: '',
-          stageOfStartup: '',
-          legalStatus: '',
-          sectorDomain: [],
-          natureOfBusiness: '',
-          innovationCategory: '',
-          businessDescription: '',
-          entrepreneurMotivation: '',
-          teamDetails: '',
-          companyDescription: '',
-          productNovelty: '',
-          competitors: '',
-          competitiveAdvantage: '',
-          marketSize: '',
-          revenueModel: '',
-          machineryRequired: '',
-          machineryDetails: '',
-          marketSurvey: '',
-          marketSurveyDetails: '',
-          researchValidation: '',
-          projectCost: '',
-          preOperativeExpenses: '',
-          prototypeExpenses: '',
-          testMarketing: '',
-          equipment: '',
-          workingCapital: '',
-          otherRequirements: '',
-          servicesExpected: [],
-          laboratoryAccess: false,
-          libraryAccess: false,
-          technicalConsulting: false,
-          otherServices: '',
-          reference1Name: '',
-          reference1Organization: '',
-          reference1Address: '',
-          reference1Phone: '',
-          reference1Email: '',
-          reference2Name: '',
-          reference2Organization: '',
-          reference2Address: '',
-          reference2Phone: '',
-          reference2Email: '',
-          declaration: false,
-          date: '',
-          place: '',
-        });
+        setFormData(initialFormData);
+        setCurrentSection(0);
+        setLookupApplicationNumber('');
+        setLookupPhoneNumber('');
+        setStatusResult(null);
+        setNotice(null);
       }, 3000);
     } catch (err) {
       setSubmitting(false);
@@ -410,7 +554,7 @@ export default function IncubationForm() {
                   borderRadius: '4px'
                 }}
               >
-                <strong>Application ID:</strong> {applicationId}
+                <strong>Application Number:</strong> {formatApplicationNumber(applicationId)}
               </p>
             )}
             <p 
@@ -466,7 +610,145 @@ export default function IncubationForm() {
           </p>
         </motion.div>
 
+        <Card className="p-6 border-0 shadow mb-8">
+          <h2
+            className="mb-4"
+            style={{
+              fontFamily: '"Hanken Grotesk", sans-serif',
+              fontSize: '18px',
+              fontWeight: 600,
+              color: '#4A4A4A'
+            }}
+          >
+            Resume Draft / Check Application Status
+          </h2>
+          <p
+            className="mb-4"
+            style={{
+              fontFamily: '"Hanken Grotesk", sans-serif',
+              color: '#7A7A7A',
+              fontSize: '13px'
+            }}
+          >
+            Use your Application Number and Mobile Phone to continue a pending draft or to track status after final submission.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="Application Number"
+              value={lookupApplicationNumber}
+              onChange={(e) => setLookupApplicationNumber(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#FF3B3B] focus:border-transparent"
+              style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '14px', color: '#4A4A4A' }}
+            />
+            <input
+              type="tel"
+              placeholder="Mobile Phone"
+              value={lookupPhoneNumber}
+              onChange={(e) => setLookupPhoneNumber(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-3 focus:ring-2 focus:ring-[#FF3B3B] focus:border-transparent"
+              style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '14px', color: '#4A4A4A' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => loadApplicationByLookup(false)}
+                disabled={statusLoading}
+                className="flex-1 px-4 py-2 text-white font-semibold border-none disabled:opacity-70"
+                style={{
+                  fontFamily: 'var(--font-hanken-grotesk)',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(90deg, #700333 0%, #E81116 100%)'
+                }}
+              >
+                Resume Draft
+              </Button>
+              <Button
+                type="button"
+                onClick={() => loadApplicationByLookup(true)}
+                disabled={statusLoading}
+                className="flex-1 px-4 py-2 border border-gray-300 bg-white text-black font-semibold hover:bg-gray-50 disabled:opacity-70"
+                style={{ fontFamily: 'var(--font-hanken-grotesk)', borderRadius: '10px' }}
+              >
+                Check Status
+              </Button>
+            </div>
+          </div>
+
+          {statusResult && (
+            <div className="mt-4 p-4 rounded-lg border border-gray-200" style={{ backgroundColor: '#F8F8F8' }}>
+              <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '14px', color: '#4A4A4A' }}>
+                <strong>Application Number:</strong> {statusResult.applicationNumber}
+              </p>
+              <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '14px', color: '#4A4A4A' }}>
+                <strong>Current Status:</strong> {statusResult.status}
+              </p>
+              {statusResult.updatedAt && (
+                <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '12px', color: '#777', marginTop: '4px' }}>
+                  Last updated: {new Date(statusResult.updatedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+
         <form onSubmit={handleSubmit} className="space-y-8">
+          <Card className="p-4 border-0 shadow">
+            <div className="flex flex-wrap gap-2 justify-center md:justify-between items-center">
+              <div className="flex flex-wrap gap-2">
+                {formSections.map((section, index) => (
+                  <button
+                    key={section}
+                    type="button"
+                    onClick={() => setCurrentSection(index)}
+                    className="px-3 py-2 rounded-full text-xs md:text-sm font-semibold transition-all"
+                    style={{
+                      fontFamily: '"Hanken Grotesk", sans-serif',
+                      backgroundColor: currentSection === index ? '#FFEBEB' : '#F4F4F4',
+                      color: currentSection === index ? '#C62828' : '#666'
+                    }}
+                  >
+                    {index + 1}. {section}
+                  </button>
+                ))}
+              </div>
+              <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', fontSize: '12px', color: '#777' }}>
+                Section {currentSection + 1} of {formSections.length}
+              </p>
+            </div>
+          </Card>
+
+          {(error || notice) && (
+            <div className="space-y-3">
+              {error && (
+                <div
+                  className="p-4 rounded-lg border border-red-300"
+                  style={{
+                    backgroundColor: '#FFE5E5',
+                    fontFamily: '"Hanken Grotesk", sans-serif',
+                    color: '#D32F2F',
+                    fontSize: '14px'
+                  }}
+                >
+                  <strong>Error:</strong> {error}
+                </div>
+              )}
+              {notice && (
+                <div
+                  className="p-4 rounded-lg border border-green-300"
+                  style={{
+                    backgroundColor: '#EAF8EA',
+                    fontFamily: '"Hanken Grotesk", sans-serif',
+                    color: '#2E7D32',
+                    fontSize: '14px'
+                  }}
+                >
+                  {notice}
+                </div>
+              )}
+            </div>
+          )}
+          <div className={currentSection === 0 ? 'space-y-8' : 'hidden'}>
           {/* Section 1: Business Name */}
           <Card className="p-6 border-0 shadow">
             <h2 
@@ -967,7 +1249,10 @@ export default function IncubationForm() {
             </div>
           </Card>
 
+          </div>
+
           {/* Section 4: Type of Business - Detailed */}
+          <div className={currentSection === 1 ? 'space-y-8' : 'hidden'}>
           <Card className="p-6 border-0 shadow">
             <h2 
               className="mb-6"
@@ -1372,7 +1657,10 @@ export default function IncubationForm() {
             </div>
           </Card>
 
+          </div>
+
           {/* Section 12: Competition */}
+          <div className={currentSection === 2 ? 'space-y-8' : 'hidden'}>
           <Card className="p-6 border-0 shadow">
             <h2 
               className="mb-6"
@@ -1716,7 +2004,10 @@ export default function IncubationForm() {
             </div>
           </Card>
 
+          </div>
+
           {/* Section 18: Project Cost */}
+          <div className={currentSection === 3 ? 'space-y-8' : 'hidden'}>
           <Card className="p-6 border-0 shadow">
             <h2 
               className="mb-6"
@@ -2193,7 +2484,10 @@ export default function IncubationForm() {
             ))}
           </Card>
 
+          </div>
+
           {/* Section 20: Declaration */}
+          <div className={currentSection === 4 ? 'space-y-8' : 'hidden'}>
           <Card className="p-6 border-0 shadow">
             <h2 
               className="mb-6"
@@ -2305,19 +2599,6 @@ export default function IncubationForm() {
 
           {/* Submit Button */}
           <div className="flex flex-col gap-4">
-            {error && (
-              <div 
-                className="p-4 rounded-lg border border-red-300"
-                style={{
-                  backgroundColor: '#FFE5E5',
-                  fontFamily: '"Hanken Grotesk", sans-serif',
-                  color: '#D32F2F',
-                  fontSize: '14px'
-                }}
-              >
-                <strong>Error:</strong> {error}
-              </div>
-            )}
             <div className="flex justify-between gap-4">
               <Button
                 type="button"
@@ -2347,6 +2628,48 @@ export default function IncubationForm() {
               </Button>
             </div>
           </div>
+          </div>
+
+          <Card className="p-4 border-0 shadow">
+            <div className="flex flex-wrap justify-between gap-3">
+              <Button
+                type="button"
+                onClick={() => setCurrentSection((prev) => Math.max(prev - 1, 0))}
+                disabled={currentSection === 0 || submitting}
+                className="px-6 py-2 border border-gray-300 bg-white text-black rounded-lg font-semibold disabled:opacity-50"
+                style={{ fontFamily: 'var(--font-hanken-grotesk)' }}
+              >
+                Previous Section
+              </Button>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={submitting}
+                  className="px-6 py-2 border-none rounded-lg text-white font-semibold disabled:opacity-70"
+                  style={{
+                    fontFamily: 'var(--font-hanken-grotesk)',
+                    background: 'linear-gradient(90deg, #5B5B5B 0%, #8A8A8A 100%)'
+                  }}
+                >
+                  {submitting ? 'Please wait...' : 'Save Draft'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setCurrentSection((prev) => Math.min(prev + 1, formSections.length - 1))}
+                  disabled={currentSection === formSections.length - 1 || submitting}
+                  className="px-6 py-2 border-none rounded-lg text-white font-semibold disabled:opacity-70"
+                  style={{
+                    fontFamily: 'var(--font-hanken-grotesk)',
+                    background: 'linear-gradient(90deg, #700333 0%, #E81116 100%)'
+                  }}
+                >
+                  Next Section
+                </Button>
+              </div>
+            </div>
+          </Card>
         </form>
       </div>
     </div>
