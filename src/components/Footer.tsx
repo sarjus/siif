@@ -67,7 +67,7 @@ export const Footer = () => {
               <Link href="/incubation-program" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
                 Incubation
               </Link>
-              <Link href="/programs" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
+              <Link href="/sponsored-programs" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
                 Programs
               </Link>
             </div>

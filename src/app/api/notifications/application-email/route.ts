@@ -17,6 +17,10 @@ const escapeHtml = (input: string) =>
     .replace(/\"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
+const sanitizeEnv = (value?: string | null) => (value ?? '').trim();
+
+const stripWrappingQuotes = (value: string) => value.replace(/^['"]+|['"]+$/g, '');
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ApplicationEmailPayload;
@@ -29,11 +33,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const mailFrom = process.env.MAIL_FROM || smtpUser;
+    const smtpHost = sanitizeEnv(process.env.SMTP_HOST);
+    const smtpPort = sanitizeEnv(process.env.SMTP_PORT);
+    const smtpUser = sanitizeEnv(process.env.SMTP_USER);
+    const smtpPass = sanitizeEnv(process.env.SMTP_PASS);
+    const mailFromRaw = sanitizeEnv(process.env.MAIL_FROM) || smtpUser;
+    const mailFrom = stripWrappingQuotes(mailFromRaw);
 
     if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !mailFrom) {
       return NextResponse.json(
@@ -43,6 +48,12 @@ export async function POST(request: NextRequest) {
     }
 
     const parsedPort = parseInt(smtpPort, 10);
+    if (Number.isNaN(parsedPort)) {
+      return NextResponse.json(
+        { error: 'Invalid SMTP_PORT value in server configuration.' },
+        { status: 500 }
+      );
+    }
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: parsedPort,

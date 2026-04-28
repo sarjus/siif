@@ -130,7 +130,7 @@ export const FounderJourney = () => {
         <div className="relative mt-8 mb-8 lg:mt-0 lg:mb-0">
           <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-end gap-x-8 pr-12 lg:pr-24">
             <div className="relative w-full max-w-[1142px] opacity-20 lg:opacity-40 translate-x-12 lg:translate-x-0">
-              <svg width="100%" height="auto" viewBox="0 0 1142 103" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+              <svg width="100%" viewBox="0 0 1142 103" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
                 <path
                   d="M-211 0.452148C-95.4222 54.9206 -243.19 5.35069 77 85.4521C202.5 116.848 364.384 102.848 705.5 48.9519C939.084 12.046 1084 69.5583 1141 83.9521"
                   stroke="black"
