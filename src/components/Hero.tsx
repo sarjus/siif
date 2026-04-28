@@ -101,7 +101,7 @@ export const Hero = () => {
                 }}
               >
                 SIIF Incubator<br />
-                <span>From first prototype to market-ready startup.</span>
+                <span>Prototype to Market.</span>
               </h3>
             </div>
           </div>
