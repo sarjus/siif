@@ -1,52 +1,60 @@
-import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { NextRequest, NextResponse } from "next/server";
+import nodemailer, { Transporter } from "nodemailer";
 
 type ApplicationEmailPayload = {
   email: string;
   leadName: string;
   businessName: string;
   applicationNumber: string;
-  status: 'draft' | 'submitted';
+  status: "draft" | "submitted";
 };
 
-const escapeHtml = (input: string) =>
+const escapeHtml = (input: string): string =>
   input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as ApplicationEmailPayload;
+    const body: ApplicationEmailPayload = await request.json();
+
     const { email, leadName, businessName, applicationNumber, status } = body;
 
-    if (!email || !leadName || !businessName || !applicationNumber || !status) {
+    if (
+      !email ||
+      !leadName ||
+      !businessName ||
+      !applicationNumber ||
+      !status
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields for email notification.' },
+        { error: "Missing required fields." },
         { status: 400 }
       );
     }
 
     const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
+    const smtpPort = Number(process.env.SMTP_PORT || 587);
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
-    const mailFrom = process.env.MAIL_FROM || smtpUser;
+    const mailFrom =
+      process.env.MAIL_FROM ||
+      `SIIF Incubator <${smtpUser}>`;
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !mailFrom) {
+    if (!smtpHost || !smtpUser || !smtpPass) {
       return NextResponse.json(
-        { error: 'Email service is not configured on server.' },
+        { error: "SMTP configuration missing." },
         { status: 500 }
       );
     }
 
-    const parsedPort = parseInt(smtpPort, 10);
-    const transporter = nodemailer.createTransport({
+    const transporter: Transporter = nodemailer.createTransport({
       host: smtpHost,
-      port: parsedPort,
-      secure: parsedPort === 465,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
         user: smtpUser,
         pass: smtpPass,
@@ -57,36 +65,43 @@ export async function POST(request: NextRequest) {
     const safeBusinessName = escapeHtml(businessName);
     const safeApplicationNumber = escapeHtml(applicationNumber);
 
-    const isDraft = status === 'draft';
+    const isDraft = status === "draft";
+
     const subject = isDraft
-      ? `SIIF Draft Saved - ${safeApplicationNumber}`
-      : `SIIF Application Submitted - ${safeApplicationNumber}`;
+      ? `SIIF Draft Saved - ${applicationNumber}`
+      : `SIIF Application Submitted - ${applicationNumber}`;
 
-    const statusLine = isDraft
-      ? 'Your application has been saved as draft. You can resume it anytime using your Application Number and Mobile Phone.'
-      : 'Your application has been submitted successfully. You can track status anytime using your Application Number and Mobile Phone.';
+    const message = isDraft
+      ? "Your application has been saved as draft. You can continue anytime using your Application Number and Mobile Number."
+      : "Your application has been submitted successfully. You can track status anytime using your Application Number and Mobile Number.";
 
-    const text = [
-      `Dear ${leadName},`,
-      '',
-      `Startup: ${businessName}`,
-      `Application Number: ${applicationNumber}`,
-      '',
-      statusLine,
-      '',
-      'Thank you,',
-      'SIIF Team',
-    ].join('\n');
+    const text = `
+Dear ${leadName},
+
+Startup: ${businessName}
+Application Number: ${applicationNumber}
+
+${message}
+
+Thank you,
+SIIF Team
+`;
 
     const html = `
-      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-        <p>Dear ${safeLeadName},</p>
-        <p><strong>Startup:</strong> ${safeBusinessName}<br/>
-        <strong>Application Number:</strong> ${safeApplicationNumber}</p>
-        <p>${escapeHtml(statusLine)}</p>
-        <p>Thank you,<br/>SIIF Team</p>
-      </div>
-    `;
+<div style="font-family:Arial,sans-serif;line-height:1.6;color:#222;">
+  <h2>SIIF Incubator</h2>
+  <p>Dear ${safeLeadName},</p>
+
+  <p>
+    <strong>Startup:</strong> ${safeBusinessName}<br>
+    <strong>Application Number:</strong> ${safeApplicationNumber}
+  </p>
+
+  <p>${escapeHtml(message)}</p>
+
+  <p>Thank you,<br><strong>SIIF Team</strong></p>
+</div>
+`;
 
     await transporter.sendMail({
       from: mailFrom,
@@ -96,9 +111,19 @@ export async function POST(request: NextRequest) {
       html,
     });
 
-    return NextResponse.json({ sent: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send email.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: "Email sent successfully.",
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to send email.";
+
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
   }
 }
