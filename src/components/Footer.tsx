@@ -51,7 +51,10 @@ export const Footer = () => {
               Ph: +91 9447233663
             </span>
             <span className="text-[clamp(14px,1.2vw,18px)] font-semibold leading-[1.4] tracking-[-0.04em] text-[#565555] font-hanken">
-              St.Joseph's College of Engineering & Technology Palai, Choondacherry PO, Meenachil Taluk, Kottayam, Kerala, India, 686579
+              SJCET Innovation and Incubation Foundation (SIIF)
+            </span>
+            <span className="text-[clamp(14px,1.2vw,18px)] font-semibold leading-[1.4] tracking-[-0.04em] text-[#565555] font-hanken">
+              St.Joseph&apos;s College of Engineering &amp; Technology Palai, Choondacherry PO, Meenachil Taluk, Kottayam, Kerala, India, 686579
             </span>
           </div>
 
