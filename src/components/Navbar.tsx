@@ -62,7 +62,7 @@ const navLinks = [
   },
   { name: "Schemes", href: "/schemes" },
   { name: "Gallery", href: "/gallery" },
-  { name: "Careers", href: "/careers" },
+  { name: "Careers", href: "https://internship.siifincubator.org/" },
 ];
 
 export function Navbar() {

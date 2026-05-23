@@ -81,7 +81,7 @@ export const Footer = () => {
               <Link href="/gallery" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
                 Gallery
               </Link>
-              <Link href="/careers" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
+              <Link href="https://internship.siifincubator.org/" className="text-[clamp(18px,2.5vw,24px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken hover:opacity-70 transition-opacity whitespace-nowrap">
                 Careers
               </Link>
             </div>
