@@ -85,6 +85,60 @@ export function Intro() {
         </div>
       </section>
 
+      <section
+        className="w-full bg-[#F5F6F7] flex justify-center px-6 pb-[12px]"
+        style={{ fontFamily: 'var(--font-hanken-grotesk), sans-serif' }}
+      >
+        <div className="max-w-[1100px] w-full flex flex-col gap-[14px]">
+          <h2 className="text-[22px] md:text-[28px] lg:text-[36px] font-semibold leading-[1.4] tracking-tight text-[#4A4A4A] text-center mb-[4px]">
+            Notifications
+          </h2>
+          <div className="rounded-[26px] p-[4px] bg-linear-to-r from-[#F3F3F3] via-[#FFFFFF] to-[#F7F7F7] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="rounded-[22px] bg-[#F8F8F8] px-[20px] py-[14px] md:px-[28px] md:py-[18px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-[#ECECEC]">
+              <div className="flex items-start gap-3">
+                <span className="mt-[2px] inline-flex h-[40px] w-[5px] shrink-0 rounded-full bg-linear-to-b from-[#F12837] to-[#B40591] shadow-[0_6px_14px_rgba(241,40,55,0.24)]" />
+                <p className="text-[14px] md:text-[16px] text-[#5C5C5C] leading-relaxed">
+                  Applications for the current incubation batch are now open. Priority review closes on <span className="font-semibold text-[#F12837]">30 June</span>.
+                </p>
+              </div>
+              <a
+                href="/apply-incubation"
+                className="inline-flex items-center justify-center rounded-[14px] px-[16px] py-[10px] text-[14px] font-semibold text-white bg-linear-to-r from-[#F12837] to-[#B40591] shadow-[0_8px_20px_rgba(241,40,55,0.28)] transition-transform duration-200 ease-out hover:-translate-y-[1px]"
+              >
+                Apply Now
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-[26px] p-[4px] bg-linear-to-r from-[#F3F3F3] via-[#FFFFFF] to-[#F7F7F7] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="rounded-[22px] bg-[#F8F8F8] px-[20px] py-[14px] md:px-[28px] md:py-[18px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-[#ECECEC]">
+              <div className="flex items-start gap-3">
+                <span className="mt-[2px] inline-flex h-[40px] w-[5px] shrink-0 rounded-full bg-linear-to-b from-[#F12837] to-[#B40591] shadow-[0_6px_14px_rgba(241,40,55,0.24)]" />
+                <p className="text-[14px] md:text-[16px] text-[#5C5C5C] leading-relaxed">
+                  Mentor onboarding and orientation slots will be published soon for the next cohort.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[26px] p-[4px] bg-linear-to-r from-[#F3F3F3] via-[#FFFFFF] to-[#F7F7F7] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <div className="rounded-[22px] bg-[#F8F8F8] px-[20px] py-[14px] md:px-[28px] md:py-[18px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-[#ECECEC]">
+              <div className="flex items-start gap-3">
+                <span className="mt-[2px] inline-flex h-[40px] w-[5px] shrink-0 rounded-full bg-linear-to-b from-[#F12837] to-[#B40591] shadow-[0_6px_14px_rgba(241,40,55,0.24)]" />
+                <p className="text-[14px] md:text-[16px] text-[#5C5C5C] leading-relaxed">
+                  Internship opportunities available for the upcoming cohort. Applications close on <span className="font-semibold text-[#F12837]">30 May</span>.
+                </p>
+              </div>
+              <a
+                href="https://internship.siifincubator.org/"
+                className="inline-flex items-center justify-center rounded-[14px] px-[16px] py-[10px] text-[14px] font-semibold text-white bg-linear-to-r from-[#F12837] to-[#B40591] shadow-[0_8px_20px_rgba(241,40,55,0.28)] transition-transform duration-200 ease-out hover:-translate-y-[1px]"
+              >
+                Apply Now
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Stats + Video Showcase Section */}
       <section
         className="w-full bg-[#F5F6F7] flex justify-center py-[60px] md:py-[80px] px-6"
@@ -102,7 +156,7 @@ export function Intro() {
             </div>
             <div className="flex flex-col gap-[24px] sm:mt-[40px] md:mt-[60px]">
               <StatCard number="24" highlight="Hrs" label="Uninterrupted Power Supply" />
-              <StatCard number="50" highlight="+" label="entors & Experts" />
+              <StatCard number="50" highlight="+" label="Mentors & Experts" />
             </div>
           </div>
         </div>
