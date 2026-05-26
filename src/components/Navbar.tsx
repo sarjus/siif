@@ -92,6 +92,7 @@ export function Navbar() {
               width={160}
               height={80}
               className="h-10 md:h-12 lg:h-14 w-auto object-contain"
+              style={{ width: 'auto' }}
               priority
             />
             <span

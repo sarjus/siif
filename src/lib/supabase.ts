@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -11,6 +12,22 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
 export const formatApplicationNumber = (id: string) => {
   const compact = id.replace(/-/g, '').toUpperCase();
   return `SIIF-${compact.slice(-10)}`;
+};
+
+export const getSafeSession = async (): Promise<Session | null> => {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (!error) {
+    return data.session;
+  }
+
+  const message = error.message || '';
+  if (message.includes('Invalid Refresh Token') || message.includes('Refresh Token Not Found')) {
+    await supabase.auth.signOut();
+    return null;
+  }
+
+  throw error;
 };
 
 // Supabase operations for incubation applications

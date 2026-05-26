@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSafeSession } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -33,13 +33,13 @@ export default function AdminDashboard() {
     const checkAuthAndFetch = async () => {
       try {
         // Check if user is authenticated
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
+        const session = await getSafeSession();
+        if (!session) {
           router.push('/admin/login');
           return;
         }
 
-        setUser(sessionData.session.user);
+        setUser(session.user);
         
         // Fetch applications
         let query = supabase
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
     };
 
     checkAuthAndFetch();
-  }, [supabase, router]);
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

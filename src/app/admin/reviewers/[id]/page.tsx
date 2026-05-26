@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSafeSession } from '@/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import AdminNav from '@/components/AdminNav';
@@ -81,8 +81,8 @@ export default function ReviewerDetailPage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const session = await getSafeSession();
+      if (!session) {
         router.push('/admin/login');
         return;
       }

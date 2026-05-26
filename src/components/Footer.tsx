@@ -26,6 +26,7 @@ export const Footer = () => {
                 width={192}
                 height={96}
                 className="h-14 w-auto max-w-[180px] lg:h-16 object-contain"
+                style={{ width: 'auto' }}
               />
             </div>
             <h2 className="text-[clamp(80px,12vw,170px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken">

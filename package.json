@@ -21,6 +21,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.7.0",
     "next": "^16.2.3",
     "nodemailer": "^8.0.7",
@@ -33,8 +35,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/nodemailer": "^6.4.21",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.21",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

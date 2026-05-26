@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase, formatApplicationNumber } from '@/lib/supabase';
+import { supabase, formatApplicationNumber, getSafeSession } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AdminNav from '@/components/AdminNav';
@@ -41,6 +41,27 @@ interface ReviewerData {
   is_active: boolean;
 }
 
+interface SectionDefinition {
+  title: string;
+  fields: Array<{ label: string; key: string }>;
+}
+
+interface AutoTableFooterRef {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
+
+const FINANCIAL_KEYS = new Set([
+  'project_cost',
+  'pre_operative_expenses',
+  'prototype_expenses',
+  'test_marketing',
+  'equipment',
+  'working_capital',
+  'other_requirements',
+]);
+
 export default function ApplicationDetail() {
   const [application, setApplication] = useState<ApplicationData | null>(null);
   const [references, setReferences] = useState<ReferenceData[]>([]);
@@ -54,6 +75,7 @@ export default function ApplicationDetail() {
   const [assignReviewerId, setAssignReviewerId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [expandedComment, setExpandedComment] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const params = useParams();
   const router = useRouter();
@@ -129,8 +151,8 @@ export default function ApplicationDetail() {
   useEffect(() => {
     const fetchApplication = async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
+        const session = await getSafeSession();
+        if (!session) {
           router.push('/admin/login');
           return;
         }
@@ -223,7 +245,7 @@ export default function ApplicationDetail() {
     );
   }
 
-  const sections = [
+  const sections: SectionDefinition[] = [
     {
       title: 'Business Information',
       fields: [
@@ -372,6 +394,221 @@ export default function ApplicationDetail() {
     return String(value);
   };
 
+  const parseNumericValue = (value: unknown): number | null => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value.replace(/,/g, '').replace(/\s+/g, '').replace(/[^0-9.-]/g, '');
+    if (!normalized) {
+      return null;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const formatIndianAmount = (amount: number): string => {
+    const sign = amount < 0 ? '-' : '';
+    const absolute = Math.abs(amount);
+    const [integerPart, decimalPart] = absolute.toFixed(2).split('.');
+    const lastThree = integerPart.slice(-3);
+    const remaining = integerPart.slice(0, -3);
+    const groupedRemaining = remaining ? `${remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},` : '';
+    return `${sign}${groupedRemaining}${lastThree}.${decimalPart}`;
+  };
+
+  const formatPdfFieldValue = (key: string, value: unknown): string => {
+    if (value === null || value === undefined || value === '') {
+      return 'N/A';
+    }
+
+    if (FINANCIAL_KEYS.has(key)) {
+      const parsed = parseNumericValue(value);
+      if (parsed !== null) {
+        return `INR ${formatIndianAmount(parsed)}`;
+      }
+    }
+
+    const baseValue = formatFieldValue(key, value);
+    return baseValue.replace('₹', 'INR').replace(/\s+/g, ' ').trim();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!application) return;
+
+    setDownloadingPdf(true);
+    try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+
+      const autoTable = autoTableModule.default;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const appNumber = formatApplicationNumber(application.id);
+      const submittedAt = application.submitted_at ? new Date(application.submitted_at).toLocaleString() : 'N/A';
+      const updatedAt = new Date(application.updated_at || application.created_at).toLocaleString();
+
+      doc.setFillColor(245, 246, 247);
+      doc.rect(0, 0, pageWidth, 120, 'F');
+
+      doc.setTextColor(220, 38, 38);
+      doc.setFontSize(20);
+      doc.text('SIIF Incubation Application', 40, 46);
+
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(14);
+      doc.text(application.business_name || 'Unnamed Business', 40, 70);
+
+      doc.setTextColor(110, 110, 110);
+      doc.setFontSize(10);
+      doc.text(`Application No: ${appNumber}`, 40, 90);
+      doc.text(`Status: ${(application.status || 'submitted').replace('_', ' ')}`, 220, 90);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 40, 106);
+
+      let currentY = 136;
+      const marginX = 40;
+
+      sections.forEach((section) => {
+        const rows = section.fields.map((field) => [
+          field.label,
+          formatPdfFieldValue(field.key, application[field.key])
+        ]);
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [[section.title, 'Value']],
+          body: rows,
+          theme: 'grid',
+          margin: { left: marginX, right: marginX },
+          headStyles: {
+            fillColor: [255, 59, 59],
+            textColor: 255,
+            fontSize: 11,
+            halign: 'left'
+          },
+          bodyStyles: {
+            fontSize: 10,
+            textColor: [60, 60, 60],
+            cellPadding: 6,
+            valign: 'top'
+          },
+          columnStyles: {
+            0: { cellWidth: 170, fontStyle: 'bold', textColor: [90, 90, 90] },
+            1: { cellWidth: 'auto' }
+          },
+          didParseCell: (data) => {
+            if (data.section === 'body' && data.column.index === 1) {
+              data.cell.styles.lineColor = [232, 232, 232];
+            }
+          }
+        });
+
+        currentY = ((doc as AutoTableFooterRef).lastAutoTable?.finalY || currentY) + 14;
+      });
+
+      if (references.length > 0) {
+        const canonicalizeReference = (ref: ReferenceData) => ({
+          name: (ref.name || '').trim(),
+          organization: (ref.organization || '').trim(),
+          address: (ref.address || '').trim(),
+          phone: (ref.phone || '').trim(),
+          email: (ref.email || '').trim().toLowerCase(),
+        });
+
+        const uniqueReferenceMap = new Map<string, ReturnType<typeof canonicalizeReference>>();
+        for (const ref of references) {
+          const canonical = canonicalizeReference(ref);
+          const identityKey = JSON.stringify(canonical);
+          if (!uniqueReferenceMap.has(identityKey)) {
+            uniqueReferenceMap.set(identityKey, canonical);
+          }
+        }
+
+        const uniqueReferences = Array.from(uniqueReferenceMap.values()).slice(0, 2);
+        const referenceRows = uniqueReferences.flatMap((ref, idx) => [
+          [`Reference ${idx + 1} - Name`, ref.name || 'N/A'],
+          ['Organization', ref.organization || 'N/A'],
+          ['Address', ref.address || 'N/A'],
+          ['Phone', ref.phone || 'N/A'],
+          ['Email', ref.email || 'N/A']
+        ]);
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['References', 'Details']],
+          body: referenceRows,
+          theme: 'grid',
+          margin: { left: marginX, right: marginX },
+          headStyles: {
+            fillColor: [42, 160, 211],
+            textColor: 255,
+            fontSize: 11,
+            halign: 'left'
+          },
+          bodyStyles: {
+            fontSize: 10,
+            textColor: [60, 60, 60],
+            cellPadding: 6,
+            valign: 'top'
+          },
+          columnStyles: {
+            0: { cellWidth: 170, fontStyle: 'bold' },
+            1: { cellWidth: 'auto' }
+          }
+        });
+
+        currentY = ((doc as AutoTableFooterRef).lastAutoTable?.finalY || currentY) + 14;
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Submission Details', 'Value']],
+        body: [
+          ['Submitted On', submittedAt],
+          ['Last Updated', updatedAt],
+          ['Admin Notes', notes || 'N/A']
+        ],
+        theme: 'grid',
+        margin: { left: marginX, right: marginX },
+        headStyles: {
+          fillColor: [76, 175, 80],
+          textColor: 255,
+          fontSize: 11,
+          halign: 'left'
+        },
+        bodyStyles: {
+          fontSize: 10,
+          textColor: [60, 60, 60],
+          cellPadding: 6,
+          valign: 'top'
+        },
+        columnStyles: {
+          0: { cellWidth: 170, fontStyle: 'bold' },
+          1: { cellWidth: 'auto' }
+        }
+      });
+
+      const sanitizedName = String(application.business_name || 'application')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      doc.save(`siif-incubation-${sanitizedName || 'application'}-${appNumber}.pdf`);
+    } catch (pdfError) {
+      console.error('Failed to generate PDF:', pdfError);
+      setError('Failed to generate PDF. Please try again.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-hanken-grotesk)' }}>
       {/* Header */}
@@ -409,6 +646,16 @@ export default function ApplicationDetail() {
               >
                 {application.status?.replace('_', ' ')}
               </span>
+              <div className="mt-3">
+                <Button
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="px-4 py-2 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2189b4]"
+                  style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
+                >
+                  {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
+                </Button>
+              </div>
             </div>
           </div>
           <AdminNav />

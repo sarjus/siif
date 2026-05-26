@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getSafeSession } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 
@@ -40,8 +40,8 @@ export default function ReviewerDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const session = await getSafeSession();
+      if (!session) {
         router.push('/admin/login');
         return;
       }
@@ -50,7 +50,7 @@ export default function ReviewerDashboard() {
       const { data: reviewerData, error: rvErr } = await supabase
         .from('reviewers')
         .select('id, name')
-        .eq('user_id', sessionData.session.user.id)
+        .eq('user_id', session.user.id)
         .maybeSingle();
 
       if (rvErr || !reviewerData) {

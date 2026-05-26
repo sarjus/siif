@@ -70,6 +70,7 @@ export default function AdminLogin() {
               width={80}
               height={40}
               className="h-10 w-auto max-w-[110px] object-contain"
+              style={{ width: 'auto' }}
               priority
             />
           </div>

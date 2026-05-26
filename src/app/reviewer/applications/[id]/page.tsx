@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase, formatApplicationNumber } from '@/lib/supabase';
+import { supabase, formatApplicationNumber, getSafeSession } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -320,11 +320,11 @@ export default function ReviewerApplicationPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) { router.push('/reviewer/login'); return; }
+      const session = await getSafeSession();
+      if (!session) { router.push('/reviewer/login'); return; }
 
       const { data: reviewerData } = await supabase
-        .from('reviewers').select('id').eq('user_id', sessionData.session.user.id).maybeSingle();
+        .from('reviewers').select('id').eq('user_id', session.user.id).maybeSingle();
       if (!reviewerData) { router.push('/reviewer/login'); return; }
 
       const { data: appData, error: appErr } = await supabase
