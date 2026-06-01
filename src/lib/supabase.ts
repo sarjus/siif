@@ -30,6 +30,19 @@ export const getSafeSession = async (): Promise<Session | null> => {
   throw error;
 };
 
+export const getAuthHeaders = async () => {
+  const session = await getSafeSession();
+  const token = session?.access_token;
+
+  if (!token) {
+    throw new Error('Authentication required.');
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+};
+
 // Supabase operations for incubation applications
 export const incubationApi = {
   // Submit application

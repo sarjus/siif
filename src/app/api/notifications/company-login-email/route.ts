@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { requireAdmin } from '@/lib/server-auth';
 
 type CompanyLoginEmailPayload = {
   email: string;
@@ -24,6 +25,9 @@ const stripWrappingQuotes = (value: string) => value.replace(/^['"]+|['"]+$/g, '
 
 export async function POST(request: NextRequest) {
   try {
+    const { response } = await requireAdmin(request);
+    if (response) return response;
+
     const body = (await request.json()) as CompanyLoginEmailPayload;
     const { email, leadName, businessName, username, temporaryPassword, loginUrl } = body;
 

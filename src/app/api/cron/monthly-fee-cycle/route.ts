@@ -5,7 +5,7 @@ const sanitizeEnv = (value?: string | null) => (value ?? '').trim();
 
 const isAuthorized = (request: NextRequest) => {
   const cronSecret = sanitizeEnv(process.env.CRON_SECRET);
-  if (!cronSecret) return true;
+  if (!cronSecret) return false;
 
   const authHeader = request.headers.get('authorization') || '';
   return authHeader === `Bearer ${cronSecret}`;

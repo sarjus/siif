@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/server-auth';
 
-const DEFAULT_COMPANY_PASSWORD = 'SIIF@2026!';
+const generateTemporaryPassword = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
+};
 
 const isAlreadyExistsError = (message: string) => {
   const normalized = message.toLowerCase();
@@ -33,6 +38,9 @@ const findAuthUserByEmail = async (
 
 export async function POST(request: NextRequest) {
   try {
+    const { response } = await requireAdmin(request);
+    if (response) return response;
+
     const body = await request.json();
     const { applicationId, email, leadName, businessName, forceRecreate } = body as {
       applicationId?: string;
@@ -64,6 +72,7 @@ export async function POST(request: NextRequest) {
     });
 
     const normalizedEmail = email.trim().toLowerCase();
+    const temporaryPassword = generateTemporaryPassword();
 
     // Only approved applications should get company portal access.
     const { data: application, error: applicationError } = await supabaseAdmin
@@ -96,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
       email: normalizedEmail,
-      password: DEFAULT_COMPANY_PASSWORD,
+      password: temporaryPassword,
       email_confirm: true,
       user_metadata: {
         role: 'company',
@@ -142,7 +151,7 @@ export async function POST(request: NextRequest) {
         const { data: updatedData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
           existingUser.id,
           {
-            password: DEFAULT_COMPANY_PASSWORD,
+            password: temporaryPassword,
             email_confirm: true,
             user_metadata: {
               ...(existingUser.user_metadata || {}),
@@ -164,7 +173,7 @@ export async function POST(request: NextRequest) {
           success: true,
           recreated: true,
           userId: updatedData.user.id,
-          defaultPassword: DEFAULT_COMPANY_PASSWORD,
+          defaultPassword: temporaryPassword,
         });
       }
 
@@ -175,7 +184,7 @@ export async function POST(request: NextRequest) {
       success: true,
       recreated: false,
       userId: userData.user.id,
-      defaultPassword: DEFAULT_COMPANY_PASSWORD,
+      defaultPassword: temporaryPassword,
     });
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

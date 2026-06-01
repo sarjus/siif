@@ -21,14 +21,49 @@ const sanitizeEnv = (value?: string | null) => (value ?? '').trim();
 
 const stripWrappingQuotes = (value: string) => value.replace(/^['"]+|['"]+$/g, '');
 
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 5;
+const rateLimitBucket = new Map<string, { count: number; resetAt: number }>();
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const getClientKey = (request: NextRequest) =>
+  (request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown')
+    .split(',')[0]
+    .trim();
+
+const isRateLimited = (request: NextRequest) => {
+  const key = getClientKey(request);
+  const now = Date.now();
+  const current = rateLimitBucket.get(key);
+
+  if (!current || current.resetAt <= now) {
+    rateLimitBucket.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  current.count += 1;
+  return current.count > RATE_LIMIT_MAX;
+};
+
 export async function POST(request: NextRequest) {
   try {
+    if (isRateLimited(request)) {
+      return NextResponse.json({ error: 'Too many email requests.' }, { status: 429 });
+    }
+
     const body = (await request.json()) as ApplicationEmailPayload;
     const { email, leadName, businessName, applicationNumber, status } = body;
 
     if (!email || !leadName || !businessName || !applicationNumber || !status) {
       return NextResponse.json(
         { error: 'Missing required fields for email notification.' },
+        { status: 400 }
+      );
+    }
+
+    if (!emailRegex.test(email) || !['draft', 'submitted'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Invalid email notification payload.' },
         { status: 400 }
       );
     }

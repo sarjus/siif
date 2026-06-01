@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildInvoiceNumber, computeInvoiceStatus } from '@/lib/fee-management';
+import { getCompanyApplicationIdForUser, getRequestUser, isAdminUser } from '@/lib/server-auth';
 
 type FeeSetting = {
   id: string;
@@ -52,6 +53,23 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = getAdminClient();
     const body = await request.json().catch(() => ({}));
     const companyId = typeof body?.companyId === 'string' ? body.companyId : null;
+    const user = await getRequestUser(request);
+    const isAdmin = isAdminUser(user);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!isAdmin) {
+      if (!companyId) {
+        return NextResponse.json({ error: 'Company ID is required.' }, { status: 400 });
+      }
+
+      const authorizedCompanyId = await getCompanyApplicationIdForUser(supabaseAdmin, user, companyId);
+      if (!authorizedCompanyId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     let settingsQuery = supabaseAdmin
       .from('incubation_fee_settings')

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ export default function ReviewersPage() {
     try {
       const res = await fetch('/api/admin/create-reviewer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       const json = await res.json();

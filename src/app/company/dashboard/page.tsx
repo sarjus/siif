@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { DEPOSIT_STATUS_COLORS, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
@@ -83,7 +83,7 @@ export default function CompanyDashboardPage() {
       if (latestApplication) {
         await fetch('/api/admin/fee-management/sync-invoices', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
           body: JSON.stringify({ companyId: latestApplication.id }),
         });
 

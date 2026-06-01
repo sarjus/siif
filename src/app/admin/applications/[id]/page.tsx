@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase, formatApplicationNumber, getSafeSession } from '@/lib/supabase';
+import { supabase, formatApplicationNumber, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AdminShell from '@/components/AdminShell';
@@ -200,6 +200,7 @@ export default function ApplicationDetail() {
     const emailResponse = await fetch('/api/notifications/company-login-email', {
       method: 'POST',
       headers: {
+        ...(await getAuthHeaders()),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -224,6 +225,7 @@ export default function ApplicationDetail() {
     const response = await fetch('/api/admin/create-company-login', {
       method: 'POST',
       headers: {
+        ...(await getAuthHeaders()),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -247,7 +249,10 @@ export default function ApplicationDetail() {
       throw new Error(payload?.error || fallbackMessage);
     }
 
-    const password = payload?.defaultPassword || 'SIIF@2026!';
+    const password = payload?.defaultPassword;
+    if (!password) {
+      throw new Error('Company login was created, but no temporary password was returned.');
+    }
     const recreated = Boolean(payload?.recreated);
 
     try {
@@ -768,7 +773,6 @@ export default function ApplicationDetail() {
   }
 
   const isCompanyAccessEligible = status === 'approved' || application.status === 'approved';
-  const defaultCompanyPassword = 'SIIF@2026!';
 
   return (
     <AdminShell
@@ -1311,7 +1315,7 @@ export default function ApplicationDetail() {
                     Temporary Password
                   </p>
                   <p style={{ fontSize: '13px', color: '#4A4A4A', fontWeight: 700 }}>
-                    {defaultCompanyPassword}
+                    Generated on creation
                   </p>
                 </div>
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import {
@@ -65,7 +65,10 @@ export default function RecordPaymentPage() {
       }
       setUserEmail(session.user.email || '');
 
-      await fetch('/api/admin/fee-management/sync-invoices', { method: 'POST' });
+      await fetch('/api/admin/fee-management/sync-invoices', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      });
 
       const [companiesRes, invoicesRes, settingsRes, depositsRes] = await Promise.all([
         supabase.from('applications').select('id, business_name, email').eq('status', 'approved').order('business_name', { ascending: true }),

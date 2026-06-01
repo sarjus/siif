@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import AdminShell from '@/components/AdminShell';
 import { formatCurrency } from '@/lib/fee-management';
@@ -33,7 +33,10 @@ export default function FeeManagementOverviewPage() {
       }
       setUserEmail(session.user.email || '');
 
-      await fetch('/api/admin/fee-management/sync-invoices', { method: 'POST' });
+      await fetch('/api/admin/fee-management/sync-invoices', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      });
 
       const [{ data: invoices }, { data: deposits }, { data: collections }] = await Promise.all([
         supabase
@@ -90,6 +93,7 @@ export default function FeeManagementOverviewPage() {
     try {
       const response = await fetch('/api/admin/fee-management/run-monthly-cycle', {
         method: 'POST',
+        headers: await getAuthHeaders(),
       });
       const payload = await response.json();
 

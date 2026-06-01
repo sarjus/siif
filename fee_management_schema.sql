@@ -187,38 +187,107 @@ alter table public.company_deposits enable row level security;
 alter table public.notifications enable row level security;
 alter table public.fee_collections enable row level security;
 
--- NOTE: Adjust these policies based on your final admin/company auth model.
--- Basic permissive policies for current app pattern.
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'incubation_fee_settings' and policyname = 'fee_settings_all'
-  ) then
-    create policy fee_settings_all on public.incubation_fee_settings for all using (true) with check (true);
-  end if;
+drop policy if exists fee_settings_all on public.incubation_fee_settings;
+drop policy if exists fee_invoices_all on public.incubation_fee_invoices;
+drop policy if exists company_deposits_all on public.company_deposits;
+drop policy if exists notifications_all on public.notifications;
+drop policy if exists fee_collections_all on public.fee_collections;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'incubation_fee_invoices' and policyname = 'fee_invoices_all'
-  ) then
-    create policy fee_invoices_all on public.incubation_fee_invoices for all using (true) with check (true);
-  end if;
+drop policy if exists fee_settings_admin_all on public.incubation_fee_settings;
+drop policy if exists fee_settings_company_read on public.incubation_fee_settings;
+drop policy if exists fee_invoices_admin_all on public.incubation_fee_invoices;
+drop policy if exists fee_invoices_company_read on public.incubation_fee_invoices;
+drop policy if exists company_deposits_admin_all on public.company_deposits;
+drop policy if exists company_deposits_company_read on public.company_deposits;
+drop policy if exists notifications_admin_all on public.notifications;
+drop policy if exists notifications_company_read on public.notifications;
+drop policy if exists fee_collections_admin_all on public.fee_collections;
+drop policy if exists fee_collections_company_read on public.fee_collections;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'company_deposits' and policyname = 'company_deposits_all'
-  ) then
-    create policy company_deposits_all on public.company_deposits for all using (true) with check (true);
-  end if;
+create policy fee_settings_admin_all on public.incubation_fee_settings
+  for all
+  using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'notifications' and policyname = 'notifications_all'
-  ) then
-    create policy notifications_all on public.notifications for all using (true) with check (true);
-  end if;
+create policy fee_settings_company_read on public.incubation_fee_settings
+  for select
+  using (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'company'
+    and exists (
+      select 1 from public.applications a
+      where a.id = incubation_fee_settings.company_id
+        and lower(a.email) = lower(auth.jwt() ->> 'email')
+        and lower(a.status) = 'approved'
+    )
+  );
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'fee_collections' and policyname = 'fee_collections_all'
-  ) then
-    create policy fee_collections_all on public.fee_collections for all using (true) with check (true);
-  end if;
-end
-$$;
+create policy fee_invoices_admin_all on public.incubation_fee_invoices
+  for all
+  using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+
+create policy fee_invoices_company_read on public.incubation_fee_invoices
+  for select
+  using (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'company'
+    and exists (
+      select 1 from public.applications a
+      where a.id = incubation_fee_invoices.company_id
+        and lower(a.email) = lower(auth.jwt() ->> 'email')
+        and lower(a.status) = 'approved'
+    )
+  );
+
+create policy company_deposits_admin_all on public.company_deposits
+  for all
+  using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+
+create policy company_deposits_company_read on public.company_deposits
+  for select
+  using (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'company'
+    and exists (
+      select 1 from public.applications a
+      where a.id = company_deposits.company_id
+        and lower(a.email) = lower(auth.jwt() ->> 'email')
+        and lower(a.status) = 'approved'
+    )
+  );
+
+create policy notifications_admin_all on public.notifications
+  for all
+  using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+
+create policy notifications_company_read on public.notifications
+  for select
+  using (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'company'
+    and (
+      recipient_type = 'all'
+      or exists (
+        select 1 from public.applications a
+        where a.id = notifications.company_id
+          and lower(a.email) = lower(auth.jwt() ->> 'email')
+          and lower(a.status) = 'approved'
+      )
+    )
+  );
+
+create policy fee_collections_admin_all on public.fee_collections
+  for all
+  using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+
+create policy fee_collections_company_read on public.fee_collections
+  for select
+  using (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'company'
+    and exists (
+      select 1 from public.applications a
+      where a.id = fee_collections.company_id
+        and lower(a.email) = lower(auth.jwt() ->> 'email')
+        and lower(a.status) = 'approved'
+    )
+  );

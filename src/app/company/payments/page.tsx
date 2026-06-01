@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatBillingMonth, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
@@ -43,7 +43,11 @@ export default function CompanyPaymentsPage() {
       if (appError || !appData) throw new Error('Approved company profile not found.');
       setCompany(appData);
 
-      await fetch('/api/admin/fee-management/sync-invoices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ companyId: appData.id }) });
+      await fetch('/api/admin/fee-management/sync-invoices', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: appData.id }),
+      });
 
       const [{ data: settingData }, { data: depositData }, { data: invoiceData }, { data: collectionData }, { data: notificationData }] = await Promise.all([
         supabase.from('incubation_fee_settings').select('*').eq('company_id', appData.id).maybeSingle(),

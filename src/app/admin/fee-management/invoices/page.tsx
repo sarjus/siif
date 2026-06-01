@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { formatBillingMonth, formatCurrency, InvoiceRecord, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
@@ -33,7 +33,10 @@ export default function MonthlyInvoicesPage() {
       }
       setUserEmail(session.user.email || '');
 
-      await fetch('/api/admin/fee-management/sync-invoices', { method: 'POST' });
+      await fetch('/api/admin/fee-management/sync-invoices', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      });
 
       const { data, error: invoiceError } = await supabase
         .from('incubation_fee_invoices')
@@ -76,7 +79,10 @@ export default function MonthlyInvoicesPage() {
     setSyncing(true);
     setError(null);
     try {
-      await fetch('/api/admin/fee-management/sync-invoices', { method: 'POST' });
+      await fetch('/api/admin/fee-management/sync-invoices', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      });
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sync invoices');
