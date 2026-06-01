@@ -34,11 +34,6 @@ export default function FeeManagementOverviewPage() {
       }
       setUserEmail(session.user.email || '');
 
-      await fetch('/api/admin/fee-management/sync-invoices', {
-        method: 'POST',
-        headers: await getAuthHeaders(),
-      });
-
       const response = await fetch('/api/admin/fee-management/overview', {
         headers: await getAuthHeaders(),
       });

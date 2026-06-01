@@ -34,11 +34,6 @@ export default function MonthlyInvoicesPage() {
       }
       setUserEmail(session.user.email || '');
 
-      await fetch('/api/admin/fee-management/sync-invoices', {
-        method: 'POST',
-        headers: await getAuthHeaders(),
-      });
-
       const response = await fetch('/api/admin/fee-management/invoices', {
         headers: await getAuthHeaders(),
       });
