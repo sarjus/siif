@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { runMonthlyFeeCycle } from '@/lib/monthly-fee-cycle';
-import { requireAdmin } from '@/lib/server-auth';
+import { getRequestUser } from '@/lib/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { response } = await requireAdmin(request);
-    if (response) return response;
+    const user = await getRequestUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Session expired. Please sign in again.' }, { status: 401 });
+    }
+
+    const role = String(user.user_metadata?.role || user.app_metadata?.role || '').toLowerCase();
+    if (role === 'company') {
+      return NextResponse.json({ error: 'Company accounts cannot run monthly cycles.' }, { status: 403 });
+    }
 
     const result = await runMonthlyFeeCycle(true);
     return NextResponse.json(result);

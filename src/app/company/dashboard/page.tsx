@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
+import CompanyShell from '@/components/CompanyShell';
+import { Bell, CalendarClock, CheckCircle2, CreditCard, IndianRupee, WalletCards, type LucideIcon } from 'lucide-react';
 import { DEPOSIT_STATUS_COLORS, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
 interface CompanyApplication {
@@ -180,76 +182,52 @@ export default function CompanyDashboardPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC]" style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}>
-      <div className="bg-[#0F172A] p-6 border-b border-slate-700">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Company Dashboard</h1>
-            <p style={{ color: '#CBD5E1', fontSize: '14px', marginTop: '4px' }}>
-              Welcome to your SIIF company portal
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="px-6 py-2 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all text-sm font-semibold"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
+  const activeCompany = applications[0];
 
-      <div className="max-w-5xl mx-auto p-6">
+  return (
+    <CompanyShell
+      title="Company Dashboard"
+      subtitle="Track fee dues, deposits, notifications, and approved application details."
+      companyName={activeCompany?.business_name || activeCompany?.email}
+      onLogout={handleLogout}
+    >
         {error && (
-          <div className="mb-6 p-4 rounded-lg text-sm" style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}>
+          <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]">
             {error}
           </div>
         )}
 
         {dashboardNotice && (
-          <div className="mb-6 p-4 rounded-lg text-sm text-white" style={{ backgroundColor: dashboardNotice.color }}>
+          <div className="mb-6 rounded-lg p-4 text-sm font-semibold text-white" style={{ backgroundColor: dashboardNotice.color }}>
             {dashboardNotice.text}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          {[
-            ['Monthly Fee', formatCurrency(feeSummary.monthlyFee), '#FF3B3B'],
-            ['Outstanding Dues', formatCurrency(feeSummary.outstandingAmount), '#DC2626'],
-            ['Overdue Invoices', String(feeSummary.overdueInvoices), '#F59E0B'],
-            ['Deposit Balance', formatCurrency(feeSummary.depositBalance), '#2AA0D3'],
-          ].map(([label, value, color]) => (
-            <Card key={label} className="border-0 shadow p-5">
-              <p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p>
-              <p className="text-2xl font-bold" style={{ color }}>{value}</p>
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {([
+            ['Monthly Fee', formatCurrency(feeSummary.monthlyFee), '#FF3B3B', IndianRupee],
+            ['Outstanding Dues', formatCurrency(feeSummary.outstandingAmount), '#DC2626', CreditCard],
+            ['Overdue Invoices', String(feeSummary.overdueInvoices), '#F59E0B', CalendarClock],
+            ['Deposit Balance', formatCurrency(feeSummary.depositBalance), '#2AA0D3', WalletCards],
+          ] as Array<[string, string, string, LucideIcon]>).map(([label, value, color, Icon]) => (
+            <Card key={String(label)} className="rounded-lg border border-[#E3E7EE] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="mb-1 text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
+                  <p className="text-2xl font-bold" style={{ color }}>{value}</p>
+                </div>
+                <span className="rounded-lg bg-[#F4F6F8] p-2" style={{ color }}>
+                  <Icon className="size-5" />
+                </span>
+              </div>
             </Card>
           ))}
         </div>
 
-        <Card className="border-0 shadow p-6 mb-6">
-          <h3 className="text-lg font-bold mb-4" style={{ color: '#FF3B3B' }}>
-            Recent Notifications
-          </h3>
-          {recentNotifications.length === 0 ? (
-            <p className="text-sm text-[#8A8A8A]">No notifications available.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentNotifications.map((notification) => (
-                <div key={notification.id} className="rounded-lg border border-gray-200 p-4 bg-[#FAFAFA]">
-                  <p className="text-sm font-semibold text-[#4A4A4A]">{notification.title}</p>
-                  <p className="mt-1 text-sm text-[#666666]">{notification.message}</p>
-                  <p className="mt-2 text-xs text-[#8A8A8A]">
-                    {new Date(notification.sent_at).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <div className="grid grid-cols-1 gap-4">
+        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]">
+          <div className="grid grid-cols-1 gap-4">
           {applications.map((app) => (
-            <Card key={app.id} className="border-0 shadow p-6">
+            <Card key={app.id} className="rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
               <p
                 style={{
                   fontSize: '12px',
@@ -261,25 +239,27 @@ export default function CompanyDashboardPage() {
               >
                 Approved Application
               </p>
-              <h2 className="text-2xl font-bold mt-2" style={{ color: '#0F172A' }}>
+              <h2 className="mt-2 text-2xl font-bold" style={{ color: '#0F172A' }}>
                 {app.business_name || 'Company'}
               </h2>
-              <p style={{ marginTop: '8px', color: '#475569', fontSize: '14px' }}>
-                Lead Entrepreneur: {app.lead_name || '-'}
-              </p>
-              <p style={{ marginTop: '4px', color: '#475569', fontSize: '14px' }}>Application Email: {app.email}</p>
-              <p style={{ marginTop: '4px', color: '#475569', fontSize: '14px' }}>
-                Status: <span style={{ color: '#16A34A', fontWeight: 700 }}>{app.status}</span>
-              </p>
-              <p style={{ marginTop: '4px', color: '#64748B', fontSize: '13px' }}>
-                Last updated:{' '}
-                {new Date(app.updated_at || app.submitted_at || new Date().toISOString()).toLocaleString()}
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-[#475569] md:grid-cols-2">
+                <p><span className="font-semibold text-[#172033]">Lead Entrepreneur:</span> {app.lead_name || '-'}</p>
+                <p><span className="font-semibold text-[#172033]">Application Email:</span> {app.email}</p>
+                <p>
+                  <span className="font-semibold text-[#172033]">Status:</span>{' '}
+                  <span className="font-bold text-[#16A34A]">{app.status.replace(/_/g, ' ')}</span>
+                </p>
+                <p>
+                  <span className="font-semibold text-[#172033]">Last updated:</span>{' '}
+                  {new Date(app.updated_at || app.submitted_at || new Date().toISOString()).toLocaleString()}
+                </p>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[#E3E7EE] pt-5">
                 <a
                   href="/company/payments"
-                  className="rounded-lg bg-[#FF3B3B] px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 transition-all"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-red-700"
                 >
+                  <CreditCard className="size-4" />
                   View Payment History
                 </a>
                 {feeSummary.depositAmountRefunded > 0 && feeSummary.depositStatus && (
@@ -301,8 +281,33 @@ export default function CompanyDashboardPage() {
               </div>
             </Card>
           ))}
+          </div>
+
+          <Card className="rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Bell className="size-5 text-[#FF3B3B]" />
+              <h3 className="text-lg font-bold text-[#172033]">Recent Notifications</h3>
+            </div>
+            {recentNotifications.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-5 text-sm text-[#667085]">
+                <CheckCircle2 className="mb-2 size-5 text-[#16A34A]" />
+                No notifications available.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentNotifications.map((notification) => (
+                  <div key={notification.id} className="rounded-lg border border-[#E3E7EE] bg-[#FAFAFA] p-4">
+                    <p className="text-sm font-bold text-[#344054]">{notification.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-[#667085]">{notification.message}</p>
+                    <p className="mt-2 text-xs text-[#8A8A8A]">
+                      {new Date(notification.sent_at).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
-      </div>
-    </div>
+    </CompanyShell>
   );
 }

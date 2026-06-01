@@ -188,6 +188,11 @@ export const exportCsv = (filename: string, headers: string[], rows: Array<Array
   URL.revokeObjectURL(url);
 };
 
+const normalizePdfCell = (cell: string | number): string | number => {
+  if (typeof cell === 'number') return cell;
+  return cell.replace(/₹\s?/g, 'INR ');
+};
+
 export const downloadReceiptPdf = (details: {
   receiptNumber: string;
   receiptDate: string;
@@ -258,14 +263,19 @@ export const downloadReportPdf = ({
   const textX = logoDataUrl ? 32 + logoSize + 12 : 32;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
+  doc.setFontSize(14);
   doc.setTextColor(220, 38, 38);
-  doc.text('SIIF – St. Joseph\'s Innovation & Incubation Forum', textX, headerTop + 16);
+  doc.text('SJCET Innovation and Incubation Foundation (SIIF)', textX, headerTop + 16);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
   doc.setTextColor(80, 80, 80);
-  doc.text("St. Joseph's College of Engineering and Technology, Palai, Kerala", textX, headerTop + 30);
+  doc.text(
+    "St.Joseph's College of Engineering & Technology Palai, Choondacherry PO, Meenachil Taluk,",
+    textX,
+    headerTop + 30
+  );
+  doc.text('Kottayam, Kerala, India, 686579.', textX, headerTop + 42);
 
   // Divider
   const dividerY = headerTop + logoSize + 10;
@@ -288,7 +298,7 @@ export const downloadReportPdf = ({
   autoTable(doc, {
     startY: dividerY + 44,
     head: [headers],
-    body: rows,
+    body: rows.map((row) => row.map(normalizePdfCell)),
     theme: 'grid',
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [249, 249, 249] },
@@ -305,7 +315,7 @@ export const downloadReportPdf = ({
     doc.setFontSize(8);
     doc.setTextColor(160, 160, 160);
     doc.text(
-      `SIIF – Confidential | Page ${i} of ${pageCount}`,
+      `SIIF - Confidential | Page ${i} of ${pageCount}`,
       32,
       doc.internal.pageSize.getHeight() - 18
     );

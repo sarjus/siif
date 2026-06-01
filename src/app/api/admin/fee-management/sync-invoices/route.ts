@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildInvoiceNumber, computeInvoiceStatus } from '@/lib/fee-management';
-import { getCompanyApplicationIdForUser, getRequestUser, isAdminUser } from '@/lib/server-auth';
+import { getCompanyApplicationIdForUser, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
 
 type FeeSetting = {
   id: string;
@@ -54,11 +54,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const companyId = typeof body?.companyId === 'string' ? body.companyId : null;
     const user = await getRequestUser(request);
-    const isAdmin = isAdminUser(user);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const isAdmin = await isEffectiveAdminUser(user);
 
     if (!isAdmin) {
       if (!companyId) {

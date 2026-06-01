@@ -18,7 +18,28 @@ export const getSafeSession = async (): Promise<Session | null> => {
   const { data, error } = await supabase.auth.getSession();
 
   if (!error) {
-    return data.session;
+    const session = data.session;
+    if (!session) return null;
+
+    const expiresAtMs = Number(session.expires_at || 0) * 1000;
+    const shouldRefresh = expiresAtMs > 0 && expiresAtMs <= Date.now() + 60_000;
+
+    if (!shouldRefresh) {
+      return session;
+    }
+
+    const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+    if (!refreshError) {
+      return refreshedData.session;
+    }
+
+    const refreshMessage = refreshError.message || '';
+    if (refreshMessage.includes('Invalid Refresh Token') || refreshMessage.includes('Refresh Token Not Found')) {
+      await supabase.auth.signOut();
+      return null;
+    }
+
+    throw refreshError;
   }
 
   const message = error.message || '';

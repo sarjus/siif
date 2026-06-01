@@ -2,43 +2,92 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { downloadReportPdf, exportCsv, formatBillingMonth, formatCurrency } from '@/lib/fee-management';
+
+type CompanyName = {
+  business_name: string | null;
+} | null;
+
+type CollectionReportRow = {
+  collection_type: string;
+  collection_date: string;
+  amount_collected: number;
+  payment_mode: string;
+  applications: CompanyName;
+};
+
+type InvoiceReportRow = {
+  billing_month: string;
+  amount: number;
+  amount_paid: number;
+  status: string;
+  applications: CompanyName;
+};
+
+type DepositReportRow = {
+  deposit_amount: number;
+  amount_collected: number;
+  amount_refunded: number;
+  balance_amount: number;
+  status: string;
+  applications: CompanyName;
+};
 
 export default function FeeReportsPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
-  const [collections, setCollections] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [deposits, setDeposits] = useState<any[]>([]);
+  const [collections, setCollections] = useState<CollectionReportRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceReportRow[]>([]);
+  const [deposits, setDeposits] = useState<DepositReportRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const session = await getSafeSession();
-    if (!session) {
-      router.push('/login');
-      return;
+    try {
+      setError(null);
+      const session = await getSafeSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+      setUserEmail(session.user.email || '');
+
+      const response = await fetch('/api/admin/fee-management/reports', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to load reports');
+      }
+
+      setCollections((payload.collections || []) as CollectionReportRow[]);
+      setInvoices((payload.invoices || []) as InvoiceReportRow[]);
+      setDeposits((payload.deposits || []) as DepositReportRow[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load reports');
+    } finally {
+      setLoading(false);
     }
-    setUserEmail(session.user.email || '');
-
-    const [{ data: collectionsData }, { data: invoiceData }, { data: depositData }] = await Promise.all([
-      supabase.from('fee_collections').select('*, applications(business_name)').order('collection_date', { ascending: false }),
-      supabase.from('incubation_fee_invoices').select('*, applications(business_name)').order('billing_month', { ascending: false }),
-      supabase.from('company_deposits').select('*, applications(business_name)').order('created_at', { ascending: false }),
-    ]);
-
-    setCollections(collectionsData || []);
-    setInvoices(invoiceData || []);
-    setDeposits(depositData || []);
-    setLoading(false);
   }, [router]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const collectionRows = useMemo(() => collections.map((item) => [item.applications?.business_name || '-', item.collection_type, item.collection_date, formatCurrency(item.amount_collected), item.payment_mode]), [collections]);
-  const outstandingRows = useMemo(() => invoices.filter((item) => item.status === 'pending' || item.status === 'partially_paid' || item.status === 'overdue').map((item) => [item.applications?.business_name || '-', formatBillingMonth(item.billing_month), formatCurrency(item.amount), formatCurrency(item.amount_paid), item.status]), [invoices]);
+  const outstandingRows = useMemo(() => invoices.filter((item) => item.status !== 'paid').map((item) => {
+    const balance = Math.max(Number(item.amount || 0) - Number(item.amount_paid || 0), 0);
+    return [
+      item.applications?.business_name || '-',
+      formatBillingMonth(item.billing_month),
+      formatCurrency(item.amount),
+      formatCurrency(item.amount_paid),
+      formatCurrency(balance),
+      item.status,
+    ];
+  }), [invoices]);
   const depositRows = useMemo(() => deposits.map((item) => [item.applications?.business_name || '-', formatCurrency(item.deposit_amount), formatCurrency(item.amount_collected), formatCurrency(item.amount_refunded), formatCurrency(item.balance_amount), item.status]), [deposits]);
 
   const handleLogout = async () => {
@@ -65,6 +114,8 @@ export default function FeeReportsPage() {
 
   return (
     <AdminShell title="Reports & Analytics" subtitle="Collection, outstanding, and deposit analysis with export options" userEmail={userEmail} onLogout={handleLogout}>
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[['Monthly Collection', formatCurrency(collections.reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#FF3B3B'], ['Outstanding Amount', formatCurrency(invoices.filter((item) => item.status !== 'paid').reduce((sum, item) => sum + Math.max(Number(item.amount || 0) - Number(item.amount_paid || 0), 0), 0)), '#DC2626'], ['Deposit Balance', formatCurrency(deposits.reduce((sum, item) => sum + Number(item.balance_amount || 0), 0)), '#2AA0D3']].map(([label, value, color]) => <Card key={String(label)} className="border-0 shadow p-5"><p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p><p className="text-2xl font-bold" style={{ color: String(color) }}>{value}</p></Card>)}
       </div>
@@ -72,7 +123,7 @@ export default function FeeReportsPage() {
       <div className="space-y-6">
         {[
           ['Collection Report', ['Company', 'Collection Type', 'Collection Date', 'Amount', 'Payment Mode'], collectionRows],
-          ['Outstanding Report', ['Company', 'Billing Month', 'Amount', 'Paid', 'Status'], outstandingRows],
+          ['Outstanding Report', ['Company', 'Billing Month', 'Amount', 'Paid', 'Outstanding', 'Status'], outstandingRows],
           ['Deposit Report', ['Company', 'Deposit Amount', 'Collected', 'Refunded', 'Balance', 'Status'], depositRows],
         ].map(([title, headers, rows]) => (
           <Card key={String(title)} className="border-0 shadow p-6">

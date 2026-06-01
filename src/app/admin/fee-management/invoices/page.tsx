@@ -23,6 +23,7 @@ export default function MonthlyInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -38,13 +39,16 @@ export default function MonthlyInvoicesPage() {
         headers: await getAuthHeaders(),
       });
 
-      const { data, error: invoiceError } = await supabase
-        .from('incubation_fee_invoices')
-        .select('*, applications(business_name, email)')
-        .order('billing_month', { ascending: false });
+      const response = await fetch('/api/admin/fee-management/invoices', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
 
-      if (invoiceError) throw invoiceError;
-      setInvoices((data || []) as InvoiceRow[]);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to load invoices');
+      }
+
+      setInvoices((payload.invoices || []) as InvoiceRow[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices');
     } finally {
@@ -88,6 +92,35 @@ export default function MonthlyInvoicesPage() {
       setError(err instanceof Error ? err.message : 'Failed to sync invoices');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (invoice: InvoiceRow) => {
+    const confirmed = window.confirm(
+      `Delete invoice ${invoice.invoice_number}? This will remove it from monthly invoices.`
+    );
+    if (!confirmed) return;
+
+    setDeletingInvoiceId(invoice.id);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/admin/fee-management/invoices', {
+        method: 'DELETE',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to delete invoice');
+      }
+
+      setInvoices((current) => current.filter((item) => item.id !== invoice.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete invoice');
+    } finally {
+      setDeletingInvoiceId(null);
     }
   };
 
@@ -144,7 +177,7 @@ export default function MonthlyInvoicesPage() {
           <table className="w-full">
             <thead>
               <tr style={{ backgroundColor: '#F5F6F7' }}>
-                {['Invoice', 'Company', 'Billing Month', 'Due Date', 'Amount', 'Paid', 'Status'].map((heading) => (
+                {['Invoice', 'Company', 'Billing Month', 'Due Date', 'Amount', 'Paid', 'Status', 'Action'].map((heading) => (
                   <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>
                 ))}
               </tr>
@@ -165,6 +198,15 @@ export default function MonthlyInvoicesPage() {
                     <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status] }}>
                       {invoice.status.replace('_', ' ')}
                     </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <button
+                      onClick={() => handleDeleteInvoice(invoice)}
+                      disabled={deletingInvoiceId === invoice.id}
+                      className="rounded-lg bg-[#DC2626] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#B91C1C] disabled:opacity-50"
+                    >
+                      {deletingInvoiceId === invoice.id ? 'Deleting...' : 'Delete'}
+                    </button>
                   </td>
                 </tr>
               ))}

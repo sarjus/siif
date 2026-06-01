@@ -4,18 +4,78 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
+import CompanyShell from '@/components/CompanyShell';
+import { Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from 'lucide-react';
 import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatBillingMonth, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
+
+type CompanyProfile = {
+  id: string;
+  business_name: string | null;
+  lead_name: string | null;
+  email: string;
+  status: string;
+  updated_at: string | null;
+  submitted_at: string | null;
+};
+
+type FeeSetting = {
+  monthly_fee?: number | null;
+  start_date?: string | null;
+  due_day?: number | null;
+  status?: string | null;
+};
+
+type Deposit = {
+  deposit_amount?: number | null;
+  amount_collected?: number | null;
+  amount_refunded?: number | null;
+  balance_amount?: number | null;
+  status?: keyof typeof DEPOSIT_STATUS_COLORS | string | null;
+};
+
+type Invoice = {
+  id: string;
+  invoice_number: string;
+  billing_month: string;
+  amount: number;
+  amount_paid: number;
+  due_date: string;
+  status: keyof typeof INVOICE_STATUS_COLORS | string;
+};
+
+type Collection = {
+  id: string;
+  receipt_number: string;
+  collection_type: string;
+  collection_date: string;
+  amount_collected: number;
+  payment_mode: string;
+  transaction_reference: string | null;
+  collected_by: string | null;
+  deposit_id: string | null;
+  incubation_fee_invoices?: {
+    invoice_number?: string | null;
+    billing_month?: string | null;
+  } | null;
+};
+
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  sent_at: string;
+};
 
 export default function CompanyPaymentsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [company, setCompany] = useState<any>(null);
-  const [setting, setSetting] = useState<any>(null);
-  const [deposit, setDeposit] = useState<any>(null);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [collections, setCollections] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [company, setCompany] = useState<CompanyProfile | null>(null);
+  const [setting, setSetting] = useState<FeeSetting | null>(null);
+  const [deposit, setDeposit] = useState<Deposit | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -41,7 +101,7 @@ export default function CompanyPaymentsPage() {
         .limit(1)
         .maybeSingle();
       if (appError || !appData) throw new Error('Approved company profile not found.');
-      setCompany(appData);
+      setCompany(appData as CompanyProfile);
 
       await fetch('/api/admin/fee-management/sync-invoices', {
         method: 'POST',
@@ -57,11 +117,11 @@ export default function CompanyPaymentsPage() {
         supabase.from('notifications').select('*').or(`company_id.eq.${appData.id},recipient_type.eq.all`).order('sent_at', { ascending: false }),
       ]);
 
-      setSetting(settingData);
-      setDeposit(depositData);
-      setInvoices(invoiceData || []);
-      setCollections(collectionData || []);
-      setNotifications(notificationData || []);
+      setSetting((settingData || null) as FeeSetting | null);
+      setDeposit((depositData || null) as Deposit | null);
+      setInvoices((invoiceData || []) as Invoice[]);
+      setCollections((collectionData || []) as Collection[]);
+      setNotifications((notificationData || []) as Notification[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load payment history');
     } finally {
@@ -101,41 +161,42 @@ export default function CompanyPaymentsPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]" style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}>
-      <div className="bg-[#0F172A] p-6 border-b border-slate-700">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Payment History</h1>
-            <p style={{ color: '#CBD5E1', fontSize: '14px', marginTop: '4px' }}>
-              Fee configuration, outstanding dues, deposit status, and receipts
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <a href="/company/dashboard" className="rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white">Back to Dashboard</a>
-            <button onClick={handleLogout} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">Logout</button>
-          </div>
-        </div>
-      </div>
+    <CompanyShell
+      title="Payment History"
+      subtitle="Review fee configuration, outstanding dues, deposit status, and downloadable receipts."
+      companyName={company?.business_name || company?.email}
+      onLogout={handleLogout}
+    >
+        {error && <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]">{error}</div>}
+        {notices.map((notice, index) => <div key={`${notice.message}-${index}`} className="mb-4 rounded-lg p-4 text-sm font-semibold text-white" style={{ backgroundColor: notice.color }}>{notice.message}</div>)}
 
-      <div className="max-w-6xl mx-auto p-6">
-        {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-        {notices.map((notice, index) => <div key={`${notice.message}-${index}`} className="mb-4 rounded-lg p-4 text-sm text-white" style={{ backgroundColor: notice.color }}>{notice.message}</div>)}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {(
             [
-              ['Outstanding Dues', formatCurrency(invoices.filter((item) => item.status !== 'paid').reduce((sum, item) => sum + Math.max(Number(item.amount || 0) - Number(item.amount_paid || 0), 0), 0)), '#DC2626'],
-              ['Monthly Fee', formatCurrency(setting?.monthly_fee || 0), '#FF3B3B'],
-              ...(Number(deposit?.deposit_amount || 0) > 0 ? [['Deposit Balance', formatCurrency(deposit?.balance_amount || 0), '#2AA0D3'] as [string, string, string]] : []),
-              ['Total Paid', formatCurrency(collections.reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#16A34A'],
-            ] as Array<[string, string, string]>
-          ).map(([label, value, color]) => <Card key={String(label)} className="border-0 shadow p-5"><p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p><p className="text-2xl font-bold" style={{ color: String(color) }}>{value}</p></Card>)}
+              ['Outstanding Dues', formatCurrency(invoices.filter((item) => item.status !== 'paid').reduce((sum, item) => sum + Math.max(Number(item.amount || 0) - Number(item.amount_paid || 0), 0), 0)), '#DC2626', IndianRupee],
+              ['Monthly Fee', formatCurrency(setting?.monthly_fee || 0), '#FF3B3B', ReceiptText],
+              ...(Number(deposit?.deposit_amount || 0) > 0 ? [['Deposit Balance', formatCurrency(deposit?.balance_amount || 0), '#2AA0D3', WalletCards] as [string, string, string, typeof WalletCards]] : []),
+              ['Total Paid', formatCurrency(collections.reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#16A34A', ShieldCheck],
+            ] as Array<[string, string, string, LucideIcon]>
+          ).map(([label, value, color, Icon]) => (
+            <Card key={String(label)} className="rounded-lg border border-[#E3E7EE] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="mb-1 text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
+                  <p className="text-2xl font-bold" style={{ color }}>{value}</p>
+                </div>
+                <span className="rounded-lg bg-[#F4F6F8] p-2" style={{ color }}>
+                  <Icon className="size-5" />
+                </span>
+              </div>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-          <Card className="border-0 shadow p-6">
-            <h3 className="mb-4 text-lg font-bold" style={{ color: '#FF3B3B' }}>Fee Configuration Details</h3>
-            <div className="space-y-2 text-sm text-[#4A4A4A]">
+        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <Card className="rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-[#172033]">Fee Configuration Details</h3>
+            <div className="space-y-2 text-sm text-[#4A5568]">
               <p><strong>Company:</strong> {company?.business_name || '-'}</p>
               <p><strong>Lead Entrepreneur:</strong> {company?.lead_name || '-'}</p>
               <p><strong>Monthly Fee:</strong> {formatCurrency(setting?.monthly_fee || 0)}</p>
@@ -145,9 +206,9 @@ export default function CompanyPaymentsPage() {
             </div>
           </Card>
           {Number(deposit?.deposit_amount || 0) > 0 && (
-            <Card className="border-0 shadow p-6">
-              <h3 className="mb-4 text-lg font-bold" style={{ color: '#FF3B3B' }}>Refundable Deposit Details</h3>
-              <div className="space-y-2 text-sm text-[#4A4A4A]">
+            <Card className="rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold text-[#172033]">Refundable Deposit Details</h3>
+              <div className="space-y-2 text-sm text-[#4A5568]">
                 <p><strong>Configured Deposit:</strong> {formatCurrency(deposit?.deposit_amount || 0)}</p>
                 <p><strong>Collected:</strong> {formatCurrency(deposit?.amount_collected || 0)}</p>
                 <p><strong>Refunded:</strong> {formatCurrency(deposit?.amount_refunded || 0)}</p>
@@ -156,10 +217,12 @@ export default function CompanyPaymentsPage() {
               </div>
             </Card>
           )}
-          <Card className="border-0 shadow p-6">
-            <h3 className="mb-4 text-lg font-bold" style={{ color: '#FF3B3B' }}>Notification History</h3>
+          <Card className="rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-bold text-[#172033]">Notification History</h3>
             <div className="space-y-3 max-h-[240px] overflow-y-auto">
-              {notifications.map((notification) => (
+              {notifications.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 text-sm text-[#667085]">No notifications yet.</div>
+              ) : notifications.map((notification) => (
                 <div key={notification.id} className="rounded-lg border border-gray-200 p-3">
                   <p className="text-sm font-semibold text-[#4A4A4A]">{notification.title}</p>
                   <p className="mt-1 text-xs text-[#666666]">{notification.message}</p>
@@ -170,8 +233,8 @@ export default function CompanyPaymentsPage() {
           </Card>
         </div>
 
-        <Card className="border-0 shadow overflow-hidden mb-6">
-          <div className="p-4 border-b border-gray-200"><h3 className="text-lg font-bold" style={{ color: '#FF3B3B' }}>Outstanding Dues & Invoices</h3></div>
+        <Card className="mb-6 overflow-hidden rounded-lg border border-[#E3E7EE] bg-white shadow-sm">
+          <div className="border-b border-[#E3E7EE] p-4"><h3 className="text-lg font-bold text-[#172033]">Outstanding Dues & Invoices</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -180,7 +243,9 @@ export default function CompanyPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice) => (
+                {invoices.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]">No invoices available.</td></tr>
+                ) : invoices.map((invoice) => (
                   <tr key={invoice.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{invoice.invoice_number}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatBillingMonth(invoice.billing_month)}</td>
@@ -195,8 +260,8 @@ export default function CompanyPaymentsPage() {
           </div>
         </Card>
 
-        <Card className="border-0 shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200"><h3 className="text-lg font-bold" style={{ color: '#FF3B3B' }}>Payment History & Receipts</h3></div>
+        <Card className="overflow-hidden rounded-lg border border-[#E3E7EE] bg-white shadow-sm">
+          <div className="border-b border-[#E3E7EE] p-4"><h3 className="text-lg font-bold text-[#172033]">Payment History & Receipts</h3></div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -205,21 +270,22 @@ export default function CompanyPaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {collections.map((collection) => (
+                {collections.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]">No payments recorded yet.</td></tr>
+                ) : collections.map((collection) => (
                   <tr key={collection.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{collection.receipt_number}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{collection.collection_type.replace(/_/g, ' ')}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{collection.collection_date}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(collection.amount_collected)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{collection.transaction_reference || '-'}</td>
-                    <td className="px-4 py-4"><button onClick={() => downloadReceiptPdf({ receiptNumber: collection.receipt_number, receiptDate: collection.collection_date, companyName: company?.business_name || company?.email || 'Company', collectionType: collection.collection_type.replace(/_/g, ' '), invoiceNumber: collection.incubation_fee_invoices?.invoice_number || null, billingMonth: collection.incubation_fee_invoices?.billing_month ? formatBillingMonth(collection.incubation_fee_invoices.billing_month) : null, depositReference: collection.deposit_id, amountPaid: collection.amount_collected, paymentMode: collection.payment_mode.replace(/_/g, ' '), transactionReference: collection.transaction_reference || null, receivedBy: collection.collected_by || null })} className="rounded-lg bg-[#2AA0D3] px-3 py-1 text-xs font-semibold text-white">Download Receipt</button></td>
+                    <td className="px-4 py-4"><button onClick={() => downloadReceiptPdf({ receiptNumber: collection.receipt_number, receiptDate: collection.collection_date, companyName: company?.business_name || company?.email || 'Company', collectionType: collection.collection_type.replace(/_/g, ' '), invoiceNumber: collection.incubation_fee_invoices?.invoice_number || null, billingMonth: collection.incubation_fee_invoices?.billing_month ? formatBillingMonth(collection.incubation_fee_invoices.billing_month) : null, depositReference: collection.deposit_id, amountPaid: collection.amount_collected, paymentMode: collection.payment_mode.replace(/_/g, ' '), transactionReference: collection.transaction_reference || null, receivedBy: collection.collected_by || null })} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2AA0D3] px-3 py-1.5 text-xs font-semibold text-white"><Download className="size-3.5" />Receipt</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </Card>
-      </div>
-    </div>
+    </CompanyShell>
   );
 }

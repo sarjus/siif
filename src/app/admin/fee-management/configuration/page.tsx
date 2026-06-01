@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import AdminShell from '@/components/AdminShell';
 import { FeeSettingRecord, DepositRecord, formatCurrency } from '@/lib/fee-management';
@@ -49,19 +49,18 @@ export default function FeeConfigurationPage() {
       }
       setUserEmail(session.user.email || '');
 
-      const [{ data: apps, error: appError }, { data: settingsData, error: settingsError }, { data: depositsData, error: depositsError }] = await Promise.all([
-        supabase.from('applications').select('id, business_name, lead_name, email, status').eq('status', 'approved').order('business_name', { ascending: true }),
-        supabase.from('incubation_fee_settings').select('*').order('created_at', { ascending: false }),
-        supabase.from('company_deposits').select('*').order('created_at', { ascending: false }),
-      ]);
+      const response = await fetch('/api/admin/fee-management/configuration', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
 
-      if (appError) throw appError;
-      if (settingsError) throw settingsError;
-      if (depositsError) throw depositsError;
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to load fee configuration data');
+      }
 
-      setCompanies((apps || []) as Company[]);
-      setSettings((settingsData || []) as FeeSettingRecord[]);
-      setDeposits((depositsData || []) as DepositRecord[]);
+      setCompanies((payload.companies || []) as Company[]);
+      setSettings((payload.settings || []) as FeeSettingRecord[]);
+      setDeposits((payload.deposits || []) as DepositRecord[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load fee configuration data');
     } finally {
@@ -112,44 +111,26 @@ export default function FeeConfigurationPage() {
     setNotice(null);
 
     try {
-      const settingPayload = {
-        company_id: form.companyId,
-        monthly_fee: Number(form.monthlyFee || 0),
-        refundable_deposit: Number(form.refundableDeposit || 0),
-        deposit_collection_date: form.depositCollectionDate || null,
-        deposit_status: form.depositStatus,
-        start_date: form.startDate,
-        due_day: Number(form.dueDay || 5),
-        grace_period_days: Number(form.gracePeriodDays || 0),
-        status: form.status,
-      };
+      const response = await fetch('/api/admin/fee-management/configuration', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: form.companyId,
+          monthlyFee: Number(form.monthlyFee || 0),
+          refundableDeposit: Number(form.refundableDeposit || 0),
+          depositCollectionDate: form.depositCollectionDate || null,
+          depositStatus: form.depositStatus,
+          startDate: form.startDate,
+          dueDay: Number(form.dueDay || 5),
+          gracePeriodDays: Number(form.gracePeriodDays || 0),
+          status: form.status,
+        }),
+      });
 
-      const { error: settingsError } = await supabase
-        .from('incubation_fee_settings')
-        .upsert(settingPayload, { onConflict: 'company_id' });
-      if (settingsError) throw settingsError;
-
-      const depositAmount = Number(form.refundableDeposit || 0);
-      const existingDeposit = companyDeposits[form.companyId];
-      const collected = existingDeposit?.amount_collected || 0;
-      const refunded = existingDeposit?.amount_refunded || 0;
-      const balance = depositAmount - collected + refunded;
-
-      const { error: depositError } = await supabase.from('company_deposits').upsert(
-        {
-          company_id: form.companyId,
-          deposit_amount: depositAmount,
-          amount_collected: collected,
-          amount_refunded: refunded,
-          balance_amount: Math.max(balance, 0),
-          collection_date: form.depositCollectionDate || existingDeposit?.collection_date || null,
-          refund_date: existingDeposit?.refund_date || null,
-          status: form.depositStatus,
-          remarks: existingDeposit?.remarks || null,
-        },
-        { onConflict: 'company_id' }
-      );
-      if (depositError) throw depositError;
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to save fee configuration');
+      }
 
       setNotice('Fee configuration saved successfully.');
       await loadData();
