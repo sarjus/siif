@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('incubation_fee_invoices')
         .select('*, applications(business_name)')
+        .neq('status', 'void')
         .order('billing_month', { ascending: false }),
       supabaseAdmin
         .from('company_deposits')

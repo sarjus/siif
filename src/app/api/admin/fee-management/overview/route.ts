@@ -12,7 +12,8 @@ export async function GET(request: NextRequest) {
       await Promise.all([
         supabaseAdmin
           .from('incubation_fee_invoices')
-          .select('status, amount, due_date, amount_paid'),
+          .select('status, amount, due_date, amount_paid')
+          .neq('status', 'void'),
         supabaseAdmin
           .from('company_deposits')
           .select('status, amount_collected, balance_amount'),
