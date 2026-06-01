@@ -50,6 +50,22 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabaseAdmin = createServiceRoleClient();
+
+    // First verify the invoice exists
+    const { data: existing, error: fetchError } = await supabaseAdmin
+      .from('incubation_fee_invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .maybeSingle();
+
+    if (fetchError) {
+      return NextResponse.json({ error: fetchError.message }, { status: 400 });
+    }
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Invoice not found.' }, { status: 404 });
+    }
+
     const { error } = await supabaseAdmin
       .from('incubation_fee_invoices')
       .delete()
