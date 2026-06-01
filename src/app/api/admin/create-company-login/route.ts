@@ -9,7 +9,23 @@ const isAlreadyExistsError = (message: string) => {
 };
 
 const findAuthUserByEmail = async (
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: {
+    auth: {
+      admin: {
+        listUsers: (params: { page: number; perPage: number }) => Promise<{
+          data: {
+            users: Array<{
+              id: string;
+              email?: string | null;
+              user_metadata?: Record<string, unknown> | null;
+            }>;
+            nextPage: number | null;
+          };
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  },
   normalizedEmail: string
 ) => {
   let page = 1;
