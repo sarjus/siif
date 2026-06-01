@@ -131,7 +131,7 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
     .eq('status', 'active');
   if (settingsError) throw settingsError;
 
-  const settings = (settingsData || []) as FeeSettingWithCompany[];
+  const settings = (settingsData || []) as unknown as FeeSettingWithCompany[];
   const eligibleSettings = settings.filter((setting) => {
     if (!setting.applications || setting.applications.status !== 'approved') return false;
     const firstMonth = getFirstInvoiceMonth(setting.start_date, setting.due_day);

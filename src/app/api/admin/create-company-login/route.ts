@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 const DEFAULT_COMPANY_PASSWORD = 'SIIF@2026!';
@@ -9,25 +9,9 @@ const isAlreadyExistsError = (message: string) => {
 };
 
 const findAuthUserByEmail = async (
-  supabaseAdmin: {
-    auth: {
-      admin: {
-        listUsers: (params: { page: number; perPage: number }) => Promise<{
-          data: {
-            users: Array<{
-              id: string;
-              email?: string | null;
-              user_metadata?: Record<string, unknown> | null;
-            }>;
-            nextPage: number | null;
-          };
-          error: { message: string } | null;
-        }>;
-      };
-    };
-  },
+  supabaseAdmin: SupabaseClient,
   normalizedEmail: string
-) => {
+): Promise<User | null> => {
   let page = 1;
   const perPage = 200;
 

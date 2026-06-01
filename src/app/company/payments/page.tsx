@@ -148,7 +148,7 @@ export default function CompanyPaymentsPage() {
                 <p><strong>Collected:</strong> {formatCurrency(deposit?.amount_collected || 0)}</p>
                 <p><strong>Refunded:</strong> {formatCurrency(deposit?.amount_refunded || 0)}</p>
                 <p><strong>Balance:</strong> {formatCurrency(deposit?.balance_amount || 0)}</p>
-                {deposit?.status && <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: DEPOSIT_STATUS_COLORS[deposit.status] }}>{deposit.status.replace('_', ' ')}</span>}
+                {deposit?.status && <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: DEPOSIT_STATUS_COLORS[deposit.status as keyof typeof DEPOSIT_STATUS_COLORS] }}>{deposit.status.replace('_', ' ')}</span>}
               </div>
             </Card>
           )}
@@ -183,7 +183,7 @@ export default function CompanyPaymentsPage() {
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(invoice.amount)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(invoice.amount_paid)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{invoice.due_date}</td>
-                    <td className="px-4 py-4"><span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status] }}>{invoice.status.replace('_', ' ')}</span></td>
+                    <td className="px-4 py-4"><span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status as keyof typeof INVOICE_STATUS_COLORS] }}>{invoice.status.replace('_', ' ')}</span></td>
                   </tr>
                 ))}
               </tbody>
