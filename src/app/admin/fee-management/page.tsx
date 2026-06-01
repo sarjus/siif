@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+
 import { Card } from '@/components/ui/card';
 import AdminShell from '@/components/AdminShell';
 import { formatCurrency } from '@/lib/fee-management';
@@ -38,37 +39,16 @@ export default function FeeManagementOverviewPage() {
         headers: await getAuthHeaders(),
       });
 
-      const [{ data: invoices }, { data: deposits }, { data: collections }] = await Promise.all([
-        supabase
-          .from('incubation_fee_invoices')
-          .select('status, amount, due_date, amount_paid'),
-        supabase
-          .from('company_deposits')
-          .select('status, amount_collected, balance_amount'),
-        supabase
-          .from('fee_collections')
-          .select('amount_collected, created_at')
-          .order('created_at', { ascending: false })
-          .limit(20),
-      ]);
-
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const nextWeek = new Date();
-      nextWeek.setDate(nextWeek.getDate() + 7);
-
-      setStats({
-        totalMonthlyCollection: (collections || []).reduce((sum, item) => sum + Number(item.amount_collected || 0), 0),
-        totalDepositsCollected: (deposits || []).reduce((sum, item) => sum + Number(item.amount_collected || 0), 0),
-        pendingFees: (invoices || []).filter((item) => item.status === 'pending' || item.status === 'partially_paid').length,
-        pendingDeposits: (deposits || []).filter((item) => item.status === 'pending').length,
-        overdueFees: (invoices || []).filter((item) => item.status === 'overdue').length,
-        recentPayments: (collections || []).length,
-        upcomingDuePayments: (invoices || []).filter((item) => {
-          const due = new Date(item.due_date);
-          return due >= monthStart && due <= nextWeek && item.status !== 'paid';
-        }).length,
+      const response = await fetch('/api/admin/fee-management/overview', {
+        headers: await getAuthHeaders(),
       });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to load fee management overview');
+      }
+
+      setStats(payload.stats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load fee management overview');
     } finally {
