@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { useEffect, useState, useCallback } from 'react';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import AdminShell from '@/components/AdminShell';
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [user, setUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const router = useRouter();
   
@@ -64,6 +65,31 @@ export default function AdminDashboard() {
     await supabase.auth.signOut();
     router.push('/login');
   };
+
+  const handleDelete = useCallback(async (app: Application) => {
+    const confirmed = window.confirm(
+      `Permanently delete "${app.business_name}"?\n\nThis will also remove all associated invoices, payments, deposits, and fee records. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(app.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/applications/${app.id}`, {
+        method: 'DELETE',
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to delete application');
+      }
+      setApplications((current) => current.filter((a) => a.id !== app.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete application');
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
 
   // Filter and search applications
   const filteredApplications = applications.filter(app => {
@@ -346,13 +372,23 @@ export default function AdminDashboard() {
                         {new Date(app.submitted_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
-                        <a
-                          href={`/admin/applications/${app.id}`}
-                          className="inline-block px-4 py-1 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all text-sm"
-                          style={{ fontFamily: 'var(--font-hanken-grotesk)' }}
-                        >
-                          View
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`/admin/applications/${app.id}`}
+                            className="inline-block px-4 py-1 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all text-sm"
+                            style={{ fontFamily: 'var(--font-hanken-grotesk)' }}
+                          >
+                            View
+                          </a>
+                          <button
+                            onClick={() => handleDelete(app)}
+                            disabled={deletingId === app.id}
+                            className="inline-block px-4 py-1 bg-white border border-[#DC2626] text-[#DC2626] rounded-lg hover:bg-[#DC2626] hover:text-white transition-all text-sm disabled:opacity-50"
+                            style={{ fontFamily: 'var(--font-hanken-grotesk)' }}
+                          >
+                            {deletingId === app.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 
 export type FeeSettingStatus = 'active' | 'inactive';
 export type DepositStatus = 'pending' | 'collected' | 'partially_refunded' | 'refunded';
-export type InvoiceStatus = 'pending' | 'partially_paid' | 'paid' | 'overdue';
+export type InvoiceStatus = 'pending' | 'partially_paid' | 'paid' | 'overdue' | 'void';
 export type CollectionType =
   | 'monthly_fee'
   | 'refundable_deposit'
@@ -97,6 +97,7 @@ export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
   partially_paid: '#2AA0D3',
   paid: '#16A34A',
   overdue: '#DC2626',
+  void: '#9CA3AF',
 };
 
 export const DEPOSIT_STATUS_COLORS: Record<DepositStatus, string> = {

@@ -21,7 +21,7 @@ type InvoiceRecord = {
   amount: number;
   amount_paid: number;
   due_date: string;
-  status: 'pending' | 'partially_paid' | 'paid' | 'overdue';
+  status: 'pending' | 'partially_paid' | 'paid' | 'overdue' | 'void';
 };
 
 const getAdminClient = () => {
@@ -125,6 +125,12 @@ export async function POST(request: NextRequest) {
             }),
           });
         } else {
+          // Never overwrite a voided invoice
+          if (existing.status === 'void') {
+            cursor.setMonth(cursor.getMonth() + 1);
+            continue;
+          }
+
           const computedStatus = computeInvoiceStatus({
             amount: Number(existing.amount || 0),
             amountPaid: Number(existing.amount_paid || 0),

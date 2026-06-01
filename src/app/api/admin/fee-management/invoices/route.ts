@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('incubation_fee_invoices')
       .select('*, applications(business_name, email)')
+      .neq('status', 'void')
       .order('billing_month', { ascending: false });
 
     if (error) {
@@ -51,10 +52,10 @@ export async function DELETE(request: NextRequest) {
 
     const supabaseAdmin = createServiceRoleClient();
 
-    // First verify the invoice exists
+    // First verify the invoice exists and is not already voided
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from('incubation_fee_invoices')
-      .select('id')
+      .select('id, status')
       .eq('id', invoiceId)
       .maybeSingle();
 
@@ -66,9 +67,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invoice not found.' }, { status: 404 });
     }
 
+    if (existing.status === 'void') {
+      return NextResponse.json({ success: true }); // already voided
+    }
+
+    // Soft-delete: mark as void so sync won't recreate it
     const { error } = await supabaseAdmin
       .from('incubation_fee_invoices')
-      .delete()
+      .update({ status: 'void' })
       .eq('id', invoiceId);
 
     if (error) {

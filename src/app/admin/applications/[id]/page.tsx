@@ -79,6 +79,7 @@ export default function ApplicationDetail() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [recreatingCompanyLogin, setRecreatingCompanyLogin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [deletingApplication, setDeletingApplication] = useState(false);
 
   const params = useParams();
   const router = useRouter();
@@ -302,6 +303,31 @@ export default function ApplicationDetail() {
     router.push('/login');
   };
 
+  const handleDeleteApplication = async () => {
+    if (!application) return;
+    const confirmed = window.confirm(
+      `Permanently delete "${application.business_name}"?\n\nThis will also remove all associated invoices, payments, deposits, and fee records. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingApplication(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/applications/${applicationId}`, {
+        method: 'DELETE',
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to delete application');
+      }
+      router.push('/admin/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete application');
+      setDeletingApplication(false);
+    }
+  };
+
   const handleSaveNotes = async () => {
     if (!application) return;
     
@@ -519,6 +545,14 @@ export default function ApplicationDetail() {
         style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
       >
         {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
+      </Button>
+      <Button
+        onClick={handleDeleteApplication}
+        disabled={deletingApplication}
+        className="px-4 py-2 bg-white border border-[#DC2626] text-[#DC2626] rounded-lg hover:bg-[#DC2626] hover:text-white transition-all"
+        style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
+      >
+        {deletingApplication ? 'Deleting...' : 'Delete Application'}
       </Button>
     </>
   );
