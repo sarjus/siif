@@ -5,7 +5,7 @@ import { supabase, getSafeSession } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import AdminNav from '@/components/AdminNav';
+import AdminShell from '@/components/AdminShell';
 
 interface ReviewerRow {
   id: string;
@@ -29,6 +29,7 @@ export default function ReviewersPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [userEmail, setUserEmail] = useState('');
 
   const router = useRouter();
 
@@ -69,13 +70,19 @@ export default function ReviewersPage() {
     const init = async () => {
       const session = await getSafeSession();
       if (!session) {
-        router.push('/admin/login');
+        router.push('/login');
         return;
       }
+      setUserEmail(session.user.email || '');
       await fetchReviewers();
     };
     init();
   }, [router, fetchReviewers]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,31 +126,21 @@ export default function ReviewersPage() {
   const totalAssigned = reviewers.reduce((s, r) => s + r.total, 0);
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}>
-      {/* Header */}
-      <div className="bg-[#F5F6F7] border-b border-gray-200 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-bold" style={{ color: '#FF3B3B' }}>
-                Reviewers
-              </h1>
-              <p style={{ color: '#8A8A8A', fontSize: '14px', marginTop: '4px' }}>
-                Manage reviewer accounts and application assignments
-              </p>
-            </div>
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="px-6 py-2 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all"
-            >
-              + Create Reviewer
-            </Button>
-          </div>
-          <AdminNav />
-        </div>
-      </div>
-      <div className="max-w-7xl mx-auto p-6">
-        {error && (
+    <AdminShell
+      title="Reviewers"
+      subtitle="Manage reviewer accounts and application assignments"
+      userEmail={userEmail}
+      onLogout={handleLogout}
+      headerActions={
+        <Button
+          onClick={() => setShowCreate(true)}
+          className="px-6 py-2 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all"
+        >
+          + Create Reviewer
+        </Button>
+      }
+    >
+      {error && (
           <div
             className="mb-6 p-4 rounded-lg text-sm"
             style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}
@@ -358,7 +355,6 @@ export default function ReviewersPage() {
             </table>
           </div>
         </Card>
-      </div>
-    </div>
+    </AdminShell>
   );
 }

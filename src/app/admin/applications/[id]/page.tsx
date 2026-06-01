@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase, formatApplicationNumber, getSafeSession } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import AdminNav from '@/components/AdminNav';
+import AdminShell from '@/components/AdminShell';
 
 interface ApplicationData {
   [key: string]: any;
@@ -67,6 +67,7 @@ export default function ApplicationDetail() {
   const [references, setReferences] = useState<ReferenceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -76,6 +77,8 @@ export default function ApplicationDetail() {
   const [assigning, setAssigning] = useState(false);
   const [expandedComment, setExpandedComment] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [recreatingCompanyLogin, setRecreatingCompanyLogin] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   const params = useParams();
   const router = useRouter();
@@ -153,9 +156,10 @@ export default function ApplicationDetail() {
       try {
         const session = await getSafeSession();
         if (!session) {
-          router.push('/admin/login');
+          router.push('/login');
           return;
         }
+        setUserEmail(session.user.email || '');
 
         const { data, error: fetchError } = await supabase
           .from('applications')
@@ -188,10 +192,116 @@ export default function ApplicationDetail() {
     fetchApplication();
   }, [applicationId, router, fetchAssignments, fetchReviewers]);
 
+  const sendCompanyLoginEmail = async (tempPassword: string) => {
+    if (!application) throw new Error('Application details are unavailable for notification email.');
+
+    const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+
+    const emailResponse = await fetch('/api/notifications/company-login-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: application.email,
+        leadName: application.lead_name || 'Founder',
+        businessName: application.business_name || 'Your startup',
+        username: application.email,
+        temporaryPassword: tempPassword,
+        loginUrl,
+      }),
+    });
+
+    if (!emailResponse.ok) {
+      const payload = await emailResponse.json().catch(() => null);
+      throw new Error(payload?.error || 'Company login email sending failed.');
+    }
+  };
+
+  const provisionCompanyLogin = async (forceRecreate: boolean) => {
+    if (!application) throw new Error('Application data is unavailable.');
+
+    const response = await fetch('/api/admin/create-company-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        applicationId,
+        email: application.email,
+        leadName: application.lead_name,
+        businessName: application.business_name,
+        forceRecreate,
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      if (response.status === 409 && !forceRecreate) {
+        return payload?.error || 'Company login already exists for this email.';
+      }
+
+      const fallbackMessage =
+        'Company login provisioning failed. Please check the API response.';
+      throw new Error(payload?.error || fallbackMessage);
+    }
+
+    const password = payload?.defaultPassword || 'SIIF@2026!';
+    const recreated = Boolean(payload?.recreated);
+
+    try {
+      await sendCompanyLoginEmail(password);
+      return recreated
+        ? `Company login recreated and email sent. Username: ${application.email}. Temporary password: ${password}.`
+        : `Company login created and email sent. Username: ${application.email}. Temporary password: ${password}.`;
+    } catch (emailError) {
+      const emailErrorMessage =
+        emailError instanceof Error ? emailError.message : 'Email could not be sent.';
+
+      return recreated
+        ? `Company login recreated. Username: ${application.email}. Temporary password: ${password}. Email failed: ${emailErrorMessage}`
+        : `Company login created. Username: ${application.email}. Temporary password: ${password}. Email failed: ${emailErrorMessage}`;
+    }
+  };
+
+  const handleRecreateCompanyLogin = async () => {
+    if (!application) return;
+
+    if (application.status !== 'approved') {
+      setError('Recreate Company Login is available only for approved applications.');
+      return;
+    }
+
+    const confirmed = confirm(
+      'Recreate company login now? This will reset the company password to the temporary default and require reset on next login.'
+    );
+    if (!confirmed) return;
+
+    setRecreatingCompanyLogin(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const message = await provisionCompanyLogin(true);
+      setNotice(message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to recreate company login');
+    } finally {
+      setRecreatingCompanyLogin(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   const handleSaveNotes = async () => {
     if (!application) return;
     
     setSaving(true);
+    setNotice(null);
     try {
       const { error: updateError } = await supabase
         .from('applications')
@@ -210,6 +320,11 @@ export default function ApplicationDetail() {
           hint: (updateError as any).hint
         });
         throw updateError;
+      }
+
+      if (status === 'approved') {
+        const message = await provisionCompanyLogin(false);
+        setNotice(message);
       }
       
       setApplication({ ...application, status, admin_notes: notes });
@@ -360,6 +475,49 @@ export default function ApplicationDetail() {
     rejected: '#F44336'
   };
 
+  const navItems = [
+    { label: 'Dashboard', href: '/admin/dashboard', description: 'Overview and applications' },
+    { label: 'Applications', href: '/admin/dashboard', description: 'Track submissions' },
+    { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts' },
+  ];
+
+  const headerPrefix = (
+    <button
+      onClick={() => router.push('/admin/dashboard')}
+      className="text-[#FF3B3B] hover:text-red-700 mb-2 flex items-center gap-2"
+      style={{ fontSize: '14px', fontWeight: 500 }}
+    >
+      ← Back to Dashboard
+    </button>
+  );
+
+  const headerActions = (
+    <>
+      <div className="text-right">
+        <p style={{ color: '#8A8A8A', fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
+          Current Status
+        </p>
+        <span
+          className="px-4 py-2 rounded-full text-white font-semibold inline-block"
+          style={{
+            backgroundColor: statusColors[application.status] || '#9A9A9A',
+            fontSize: '13px'
+          }}
+        >
+          {application.status?.replace('_', ' ')}
+        </span>
+      </div>
+      <Button
+        onClick={handleDownloadPdf}
+        disabled={downloadingPdf}
+        className="px-4 py-2 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2189b4]"
+        style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
+      >
+        {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
+      </Button>
+    </>
+  );
+
   // Format field values for display
   const formatFieldValue = (key: string, value: any): string => {
     if (value === null || value === undefined || value === '') return 'N/A';
@@ -438,7 +596,7 @@ export default function ApplicationDetail() {
     return baseValue.replace('₹', 'INR').replace(/\s+/g, ' ').trim();
   };
 
-  const handleDownloadPdf = async () => {
+  async function handleDownloadPdf() {
     if (!application) return;
 
     setDownloadingPdf(true);
@@ -607,64 +765,21 @@ export default function ApplicationDetail() {
     } finally {
       setDownloadingPdf(false);
     }
-  };
+  }
+
+  const isCompanyAccessEligible = status === 'approved' || application.status === 'approved';
+  const defaultCompanyPassword = 'SIIF@2026!';
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-hanken-grotesk)' }}>
-      {/* Header */}
-      <div className="bg-[#F5F6F7] border-b border-gray-200 p-6 mb-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <button
-                onClick={() => router.back()}
-                className="text-[#FF3B3B] hover:text-red-700 mb-2 flex items-center gap-2"
-                style={{ fontSize: '14px', fontWeight: 500 }}
-              >
-                ← Back to Dashboard
-              </button>
-              <h1
-                className="text-3xl font-bold"
-                style={{ color: '#FF3B3B', fontFamily: '"Hanken Grotesk", sans-serif' }}
-              >
-                {application.business_name}
-              </h1>
-              <p style={{ color: '#8A8A8A', fontSize: '14px', marginTop: '4px' }}>
-                Application Number: {formatApplicationNumber(application.id)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p style={{ color: '#8A8A8A', fontSize: '12px', textTransform: 'uppercase', fontWeight: 600, marginBottom: '8px' }}>
-                Current Status
-              </p>
-              <span
-                className="px-4 py-2 rounded-full text-white font-semibold inline-block"
-                style={{
-                  backgroundColor: statusColors[application.status] || '#9A9A9A',
-                  fontSize: '13px'
-                }}
-              >
-                {application.status?.replace('_', ' ')}
-              </span>
-              <div className="mt-3">
-                <Button
-                  onClick={handleDownloadPdf}
-                  disabled={downloadingPdf}
-                  className="px-4 py-2 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2189b4]"
-                  style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
-                >
-                  {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
-                </Button>
-              </div>
-            </div>
-          </div>
-          <AdminNav />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        {error && (
+    <AdminShell
+      title={application.business_name}
+      subtitle={`Application Number: ${formatApplicationNumber(application.id)}`}
+      userEmail={userEmail}
+      onLogout={handleLogout}
+      headerPrefix={headerPrefix}
+      headerActions={headerActions}
+    >
+      {error && (
           <div 
             className="mb-6 p-4 rounded-lg"
             style={{
@@ -674,6 +789,20 @@ export default function ApplicationDetail() {
             }}
           >
             {error}
+          </div>
+        )}
+
+        {notice && (
+          <div
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              backgroundColor: '#EAF9F0',
+              fontFamily: '"Hanken Grotesk", sans-serif',
+              color: '#1E7F46',
+              fontSize: '14px',
+            }}
+          >
+            {notice}
           </div>
         )}
 
@@ -1135,6 +1264,76 @@ export default function ApplicationDetail() {
               </button>
             </Card>
 
+            {/* Company Access Card */}
+            <Card className="border-0 shadow p-6">
+              <h3
+                style={{
+                  fontFamily: '"Hanken Grotesk", sans-serif',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#4A4A4A',
+                  marginBottom: '12px',
+                }}
+              >
+                Company Access
+              </h3>
+
+              <div className="space-y-3 mb-4">
+                <div>
+                  <p
+                    style={{
+                      fontFamily: '"Hanken Grotesk", sans-serif',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#8A8A8A',
+                      textTransform: 'uppercase',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    Username (Application Email)
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#4A4A4A', wordBreak: 'break-all' }}>
+                    {application.email || 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <p
+                    style={{
+                      fontFamily: '"Hanken Grotesk", sans-serif',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: '#8A8A8A',
+                      textTransform: 'uppercase',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    Temporary Password
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#4A4A4A', fontWeight: 700 }}>
+                    {defaultCompanyPassword}
+                  </p>
+                </div>
+
+                <p style={{ fontSize: '12px', color: '#8A8A8A' }}>
+                  Company login is available only after application approval. Password reset is required on first login.
+                </p>
+              </div>
+
+              <button
+                onClick={handleRecreateCompanyLogin}
+                disabled={!isCompanyAccessEligible || recreatingCompanyLogin || saving}
+                className="w-full px-4 py-3 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2289b5] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
+              >
+                {recreatingCompanyLogin
+                  ? 'Recreating...'
+                  : isCompanyAccessEligible
+                    ? 'Recreate Company Login'
+                    : 'Approve Application To Enable'}
+              </button>
+            </Card>
+
             {/* Contact Card */}
             <Card className="border-0 shadow p-6">
               <h3 
@@ -1206,7 +1405,6 @@ export default function ApplicationDetail() {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+    </AdminShell>
   );
 }

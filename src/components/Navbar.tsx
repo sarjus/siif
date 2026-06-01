@@ -46,6 +46,7 @@ const navLinks = [
     subLinks: [
       { name: "Current Companies", href: "/current-companies" },
       { name: "Graduated Companies", href: "/graduated-companies" },
+      { name: "Portal Login", href: "/login" },
       { name: "Testimonials", href: "/testimonials" },
       { name: "Awards & Recognition", href: "/awards" },
     ]

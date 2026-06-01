@@ -42,7 +42,7 @@ export default function ReviewerDashboard() {
     try {
       const session = await getSafeSession();
       if (!session) {
-        router.push('/admin/login');
+        router.push('/login');
         return;
       }
 
@@ -84,7 +84,7 @@ export default function ReviewerDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/admin/login');
+    router.push('/login');
   };
 
   if (loading) {

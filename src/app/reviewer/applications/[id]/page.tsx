@@ -321,11 +321,11 @@ export default function ReviewerApplicationPage() {
   const fetchData = useCallback(async () => {
     try {
       const session = await getSafeSession();
-      if (!session) { router.push('/reviewer/login'); return; }
+      if (!session) { router.push('/login'); return; }
 
       const { data: reviewerData } = await supabase
         .from('reviewers').select('id').eq('user_id', session.user.id).maybeSingle();
-      if (!reviewerData) { router.push('/reviewer/login'); return; }
+      if (!reviewerData) { router.push('/login'); return; }
 
       const { data: appData, error: appErr } = await supabase
         .from('applications').select('*').eq('id', applicationId).single();

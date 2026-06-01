@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { supabase, getSafeSession } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import AdminNav from '@/components/AdminNav';
+import AdminShell from '@/components/AdminShell';
 
 interface Application {
   id: string;
@@ -35,7 +34,7 @@ export default function AdminDashboard() {
         // Check if user is authenticated
         const session = await getSafeSession();
         if (!session) {
-          router.push('/admin/login');
+          router.push('/login');
           return;
         }
 
@@ -63,7 +62,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/admin/login');
+    router.push('/login');
   };
 
   // Filter and search applications
@@ -78,7 +77,6 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
-  const statuses = ['submitted', 'under_review', 'approved', 'rejected'];
   const statusColors: Record<string, string> = {
     submitted: '#9A9A9A',
     under_review: '#2AA0D3',
@@ -95,42 +93,13 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-hanken-grotesk), sans-serif' }}>
-      {/* Header */}
-      <div className="bg-[#F5F6F7] border-b border-gray-200 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 
-                className="text-3xl font-bold"
-                style={{ color: '#FF3B3B', fontFamily: '"Hanken Grotesk", sans-serif' }}
-              >
-                Admin Dashboard
-              </h1>
-              <p style={{ color: '#8A8A8A', fontSize: '14px', marginTop: '4px' }}>
-                Manage incubation applications
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span style={{ color: '#4A4A4A', fontSize: '14px' }}>
-                👤 {user?.email}
-              </span>
-            <Button
-              onClick={handleLogout}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all"
-              style={{ fontFamily: 'var(--font-hanken-grotesk)' }}
-            >
-              Logout
-            </Button>
-            </div>
-          </div>
-          <AdminNav />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        {error && (
+    <AdminShell
+      title="Admin Dashboard"
+      subtitle="Manage incubation applications"
+      userEmail={user?.email}
+      onLogout={handleLogout}
+    >
+      {error && (
           <div 
             className="mb-6 p-4 rounded-lg"
             style={{
@@ -392,9 +361,6 @@ export default function AdminDashboard() {
             </table>
           </div>
         </Card>
-      </div>
-
-
-    </div>
+    </AdminShell>
   );
 }

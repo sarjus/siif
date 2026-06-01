@@ -83,7 +83,7 @@ export default function ReviewerDetailPage() {
     const init = async () => {
       const session = await getSafeSession();
       if (!session) {
-        router.push('/admin/login');
+        router.push('/login');
         return;
       }
       await fetchData();
