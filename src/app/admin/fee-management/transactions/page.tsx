@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
-import { buildReceiptNumber, computeDepositStatus, computeInvoiceStatus, downloadReceiptPdf, exportCsv, formatBillingMonth, formatCurrency, PAYMENT_MODE_OPTIONS } from '@/lib/fee-management';
+import { downloadReceiptPdf, exportCsv, formatBillingMonth, formatCurrency, PAYMENT_MODE_OPTIONS } from '@/lib/fee-management';
 
 type TransactionRow = {
   id: string;
@@ -25,8 +25,6 @@ type TransactionRow = {
   incubation_fee_invoices?: { invoice_number: string; billing_month: string; amount: number; due_date: string; company_id: string };
 };
 
-type DepositRow = { id: string; deposit_amount: number; amount_collected: number; amount_refunded: number; balance_amount: number; company_id: string; };
-
 export default function TransactionsPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState('');
@@ -42,22 +40,17 @@ export default function TransactionsPage() {
   const loadData = useCallback(async () => {
     try {
       const session = await getSafeSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
+      if (!session) { router.push('/login'); return; }
       setUserEmail(session.user.email || '');
 
-      const [{ data: transactionData }, { data: companyData }] = await Promise.all([
-        supabase
-          .from('fee_collections')
-          .select('*, applications(business_name, email), incubation_fee_invoices(invoice_number, billing_month, amount, due_date, company_id)')
-          .order('collection_date', { ascending: false }),
-        supabase.from('applications').select('id, business_name').eq('status', 'approved').order('business_name', { ascending: true }),
-      ]);
+      const response = await fetch('/api/admin/fee-management/transactions', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to load transactions');
 
-      setTransactions((transactionData || []) as TransactionRow[]);
-      setCompanies(companyData || []);
+      setTransactions(payload.transactions || []);
+      setCompanies(payload.companies || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
@@ -67,49 +60,26 @@ export default function TransactionsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const filtered = useMemo(() => transactions.filter((transaction) => {
-    if (filters.companyId !== 'all' && transaction.company_id !== filters.companyId) return false;
-    if (filters.mode !== 'all' && transaction.payment_mode !== filters.mode) return false;
-    if (filters.type !== 'all' && transaction.collection_type !== filters.type) return false;
-    if (filters.from && transaction.collection_date < filters.from) return false;
-    if (filters.to && transaction.collection_date > filters.to) return false;
+  const filtered = useMemo(() => transactions.filter((t) => {
+    if (filters.companyId !== 'all' && t.company_id !== filters.companyId) return false;
+    if (filters.mode !== 'all' && t.payment_mode !== filters.mode) return false;
+    if (filters.type !== 'all' && t.collection_type !== filters.type) return false;
+    if (filters.from && t.collection_date < filters.from) return false;
+    if (filters.to && t.collection_date > filters.to) return false;
     return true;
   }), [filters, transactions]);
 
-  const recalcInvoice = async (invoiceId: string, companyId: string) => {
-    const [{ data: invoice }, { data: setting }, { data: collections }] = await Promise.all([
-      supabase.from('incubation_fee_invoices').select('*').eq('id', invoiceId).single(),
-      supabase.from('incubation_fee_settings').select('grace_period_days').eq('company_id', companyId).maybeSingle(),
-      supabase.from('fee_collections').select('amount_collected').eq('invoice_id', invoiceId).eq('status', 'recorded'),
-    ]);
-
-    const totalPaid = (collections || []).reduce((sum, item) => sum + Number(item.amount_collected || 0), 0);
-    const status = computeInvoiceStatus({ amount: Number(invoice?.amount || 0), amountPaid: totalPaid, dueDate: invoice?.due_date || new Date().toISOString().slice(0, 10), gracePeriodDays: Number(setting?.grace_period_days || 0) });
-    await supabase.from('incubation_fee_invoices').update({ amount_paid: totalPaid, status }).eq('id', invoiceId);
-  };
-
-  const recalcDeposit = async (depositId: string) => {
-    const [{ data: deposit }, { data: collections }] = await Promise.all([
-      supabase.from('company_deposits').select('*').eq('id', depositId).single(),
-      supabase.from('fee_collections').select('collection_type, amount_collected').eq('deposit_id', depositId).eq('status', 'recorded'),
-    ]);
-
-    const totalCollected = (collections || []).filter((item) => item.collection_type === 'refundable_deposit').reduce((sum, item) => sum + Number(item.amount_collected || 0), 0);
-    const totalRefunded = (collections || []).filter((item) => item.collection_type === 'deposit_refund').reduce((sum, item) => sum + Number(item.amount_collected || 0), 0);
-    const status = computeDepositStatus({ depositAmount: Number(deposit?.deposit_amount || 0), amountCollected: totalCollected, amountRefunded: totalRefunded });
-
-    await supabase.from('company_deposits').update({ amount_collected: totalCollected, amount_refunded: totalRefunded, balance_amount: Math.max(Number(deposit?.deposit_amount || 0) - totalCollected + totalRefunded, 0), status }).eq('id', depositId);
-  };
-
   const handleDelete = async (transaction: TransactionRow) => {
-    const confirmed = confirm('Delete this transaction? This will recalculate linked balances.');
-    if (!confirmed) return;
+    if (!confirm('Delete this transaction? This will recalculate linked balances.')) return;
     setError(null);
     try {
-      const { error: deleteError } = await supabase.from('fee_collections').delete().eq('id', transaction.id);
-      if (deleteError) throw deleteError;
-      if (transaction.invoice_id) await recalcInvoice(transaction.invoice_id, transaction.company_id);
-      if (transaction.deposit_id) await recalcDeposit(transaction.deposit_id);
+      const response = await fetch('/api/admin/fee-management/transactions', {
+        method: 'DELETE',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: transaction.id }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to delete');
       setNotice('Transaction deleted successfully.');
       await loadData();
     } catch (err) {
@@ -125,8 +95,13 @@ export default function TransactionsPage() {
   const saveEdit = async () => {
     if (!editing) return;
     try {
-      const { error: updateError } = await supabase.from('fee_collections').update(editForm).eq('id', editing.id);
-      if (updateError) throw updateError;
+      const response = await fetch('/api/admin/fee-management/transactions', {
+        method: 'PUT',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: editing.id, updates: editForm }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to update');
       setNotice('Transaction updated successfully.');
       setEditing(null);
       await loadData();
@@ -136,13 +111,13 @@ export default function TransactionsPage() {
   };
 
   const exportTransactions = () => {
-    exportCsv('fee-transactions.csv', ['Receipt Number', 'Company', 'Collection Type', 'Billing Month', 'Amount', 'Payment Date', 'Payment Mode', 'Transaction Reference', 'Status'], filtered.map((item) => [item.receipt_number, item.applications?.business_name || item.applications?.email || '-', item.collection_type, item.incubation_fee_invoices?.billing_month ? formatBillingMonth(item.incubation_fee_invoices.billing_month) : '-', item.amount_collected, item.collection_date, item.payment_mode, item.transaction_reference || '-', item.status]));
+    exportCsv('fee-transactions.csv',
+      ['Receipt Number', 'Company', 'Collection Type', 'Billing Month', 'Amount', 'Payment Date', 'Payment Mode', 'Transaction Reference', 'Status'],
+      filtered.map((item) => [item.receipt_number, item.applications?.business_name || item.applications?.email || '-', item.collection_type, item.incubation_fee_invoices?.billing_month ? formatBillingMonth(item.incubation_fee_invoices.billing_month) : '-', item.amount_collected, item.collection_date, item.payment_mode, item.transaction_reference || '-', item.status])
+    );
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
@@ -152,15 +127,27 @@ export default function TransactionsPage() {
       {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <select value={filters.companyId} onChange={(e) => setFilters((prev) => ({ ...prev, companyId: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Companies</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.business_name || 'Company'}</option>)}</select>
-        <select value={filters.mode} onChange={(e) => setFilters((prev) => ({ ...prev, mode: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Payment Modes</option>{PAYMENT_MODE_OPTIONS.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select>
-        <select value={filters.type} onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Collection Types</option>{['monthly_fee','refundable_deposit','additional_charges','penalty_charges','other_fees','deposit_refund'].map((type) => <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>)}</select>
+        <select value={filters.companyId} onChange={(e) => setFilters((prev) => ({ ...prev, companyId: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Companies</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.business_name || 'Company'}</option>)}</select>
+        <select value={filters.mode} onChange={(e) => setFilters((prev) => ({ ...prev, mode: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Payment Modes</option>{PAYMENT_MODE_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select>
+        <select value={filters.type} onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2"><option value="all">All Collection Types</option>{['monthly_fee','refundable_deposit','additional_charges','penalty_charges','other_fees','deposit_refund'].map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}</select>
         <input type="date" value={filters.from} onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2" />
         <input type="date" value={filters.to} onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))} className="rounded-lg border border-gray-300 px-4 py-2" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        {[['Total Fees Collected', formatCurrency(filtered.filter((item) => item.collection_type === 'monthly_fee').reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#16A34A'], ['Total Deposits Collected', formatCurrency(filtered.filter((item) => item.collection_type === 'refundable_deposit').reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#2AA0D3'], ['Pending Amount', formatCurrency(filtered.filter((item) => item.incubation_fee_invoices && item.incubation_fee_invoices.amount > item.amount_collected).reduce((sum, item) => sum + Math.max((item.incubation_fee_invoices?.amount || 0) - item.amount_collected, 0), 0)), '#F59E0B'], ['Overdue Amount', formatCurrency(filtered.filter((item) => item.incubation_fee_invoices && new Date(item.incubation_fee_invoices.due_date) < new Date()).reduce((sum, item) => sum + Number(item.amount_collected || 0), 0)), '#DC2626'], ['Paid Companies', new Set(filtered.filter((item) => item.collection_type === 'monthly_fee').map((item) => item.company_id)).size, '#7C3AED'], ['Overdue Companies', new Set(filtered.filter((item) => item.incubation_fee_invoices && new Date(item.incubation_fee_invoices.due_date) < new Date()).map((item) => item.company_id)).size, '#0EA5A0']].map(([label, value, color]) => <Card key={String(label)} className="border-0 shadow p-5"><p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p><p className="text-xl font-bold" style={{ color: String(color) }}>{value}</p></Card>)}
+        {[
+          ['Total Fees Collected', formatCurrency(filtered.filter((i) => i.collection_type === 'monthly_fee').reduce((s, i) => s + Number(i.amount_collected || 0), 0)), '#16A34A'],
+          ['Total Deposits Collected', formatCurrency(filtered.filter((i) => i.collection_type === 'refundable_deposit').reduce((s, i) => s + Number(i.amount_collected || 0), 0)), '#2AA0D3'],
+          ['Pending Amount', formatCurrency(filtered.filter((i) => i.incubation_fee_invoices && i.incubation_fee_invoices.amount > i.amount_collected).reduce((s, i) => s + Math.max((i.incubation_fee_invoices?.amount || 0) - i.amount_collected, 0), 0)), '#F59E0B'],
+          ['Overdue Amount', formatCurrency(filtered.filter((i) => i.incubation_fee_invoices && new Date(i.incubation_fee_invoices.due_date) < new Date()).reduce((s, i) => s + Number(i.amount_collected || 0), 0)), '#DC2626'],
+          ['Paid Companies', String(new Set(filtered.filter((i) => i.collection_type === 'monthly_fee').map((i) => i.company_id)).size), '#7C3AED'],
+          ['Overdue Companies', String(new Set(filtered.filter((i) => i.incubation_fee_invoices && new Date(i.incubation_fee_invoices.due_date) < new Date()).map((i) => i.company_id)).size), '#0EA5A0'],
+        ].map(([label, value, color]) => (
+          <Card key={String(label)} className="border-0 shadow p-5">
+            <p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p>
+            <p className="text-xl font-bold" style={{ color: String(color) }}>{value}</p>
+          </Card>
+        ))}
       </div>
 
       <Card className="border-0 shadow overflow-hidden">
@@ -168,26 +155,26 @@ export default function TransactionsPage() {
           <table className="w-full">
             <thead>
               <tr style={{ backgroundColor: '#F5F6F7' }}>
-                {['Receipt Number', 'Company', 'Collection Type', 'Billing Month', 'Amount', 'Payment Date', 'Payment Mode', 'Transaction Reference', 'Status', 'Actions'].map((heading) => <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>)}
+                {['Receipt Number', 'Company', 'Collection Type', 'Billing Month', 'Amount', 'Payment Date', 'Payment Mode', 'Transaction Reference', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>)}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((transaction) => (
-                <tr key={transaction.id} className="border-t border-gray-200">
-                  <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{transaction.receipt_number}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.applications?.business_name || transaction.applications?.email || '-'}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.collection_type.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.incubation_fee_invoices?.billing_month ? formatBillingMonth(transaction.incubation_fee_invoices.billing_month) : '-'}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(transaction.amount_collected)}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.collection_date}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.payment_mode.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.transaction_reference || '-'}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{transaction.status}</td>
+              {filtered.map((t) => (
+                <tr key={t.id} className="border-t border-gray-200">
+                  <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{t.receipt_number}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.applications?.business_name || t.applications?.email || '-'}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.collection_type.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.incubation_fee_invoices?.billing_month ? formatBillingMonth(t.incubation_fee_invoices.billing_month) : '-'}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(t.amount_collected)}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.collection_date}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.payment_mode.replace(/_/g, ' ')}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.transaction_reference || '-'}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{t.status}</td>
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => downloadReceiptPdf({ receiptNumber: transaction.receipt_number, receiptDate: transaction.collection_date, companyName: transaction.applications?.business_name || transaction.applications?.email || 'Company', collectionType: transaction.collection_type.replace(/_/g, ' '), invoiceNumber: transaction.incubation_fee_invoices?.invoice_number || null, billingMonth: transaction.incubation_fee_invoices?.billing_month ? formatBillingMonth(transaction.incubation_fee_invoices.billing_month) : null, depositReference: transaction.deposit_id, amountPaid: transaction.amount_collected, paymentMode: transaction.payment_mode.replace(/_/g, ' '), transactionReference: transaction.transaction_reference || null, receivedBy: transaction.collected_by || null })} className="rounded-lg bg-[#2AA0D3] px-3 py-1 text-xs font-semibold text-white">Receipt</button>
-                      <button onClick={() => startEdit(transaction)} className="rounded-lg border border-[#FF3B3B] px-3 py-1 text-xs font-semibold text-[#FF3B3B]">Edit</button>
-                      <button onClick={() => handleDelete(transaction)} className="rounded-lg border border-[#D32F2F] px-3 py-1 text-xs font-semibold text-[#D32F2F]">Delete</button>
+                      <button onClick={() => downloadReceiptPdf({ receiptNumber: t.receipt_number, receiptDate: t.collection_date, companyName: t.applications?.business_name || t.applications?.email || 'Company', collectionType: t.collection_type.replace(/_/g, ' '), invoiceNumber: t.incubation_fee_invoices?.invoice_number || null, billingMonth: t.incubation_fee_invoices?.billing_month ? formatBillingMonth(t.incubation_fee_invoices.billing_month) : null, depositReference: t.deposit_id, amountPaid: t.amount_collected, paymentMode: t.payment_mode.replace(/_/g, ' '), transactionReference: t.transaction_reference || null, receivedBy: t.collected_by || null })} className="rounded-lg bg-[#2AA0D3] px-3 py-1 text-xs font-semibold text-white">Receipt</button>
+                      <button onClick={() => startEdit(t)} className="rounded-lg border border-[#FF3B3B] px-3 py-1 text-xs font-semibold text-[#FF3B3B]">Edit</button>
+                      <button onClick={() => handleDelete(t)} className="rounded-lg border border-[#D32F2F] px-3 py-1 text-xs font-semibold text-[#D32F2F]">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -203,7 +190,7 @@ export default function TransactionsPage() {
             <h3 className="mb-4 text-lg font-bold" style={{ color: '#FF3B3B' }}>Edit Transaction</h3>
             <div className="space-y-4">
               <input type="date" value={editForm.collection_date} onChange={(e) => setEditForm((prev) => ({ ...prev, collection_date: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2" />
-              <select value={editForm.payment_mode} onChange={(e) => setEditForm((prev) => ({ ...prev, payment_mode: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2">{PAYMENT_MODE_OPTIONS.map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}</select>
+              <select value={editForm.payment_mode} onChange={(e) => setEditForm((prev) => ({ ...prev, payment_mode: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2">{PAYMENT_MODE_OPTIONS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select>
               <input type="text" value={editForm.transaction_reference} onChange={(e) => setEditForm((prev) => ({ ...prev, transaction_reference: e.target.value }))} placeholder="Transaction reference" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
               <textarea value={editForm.remarks} onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))} rows={4} className="w-full rounded-lg border border-gray-300 px-4 py-2" />
               <div className="flex gap-3">

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
 
 interface Company {
@@ -60,6 +59,42 @@ const companies: CompanyWithWebsite[] = [
     location: 'Kerala',
     focus: 'Digital Transformation & Enterprise Solutions',
     website: 'https://kochi.digital/',
+  },
+  {
+    id: 'vedic-solutions',
+    name: 'Vedic Solutions',
+    logo: '/assets/Startups/Vedik logo.jpeg',
+    tagline: 'Bridging Ideas and Digital Transformation',
+    description:
+      'Vedic Solutions is an emerging IT startup dedicated to creating innovative, technology-driven software solutions for businesses, educational institutions, and individuals. Specializing in custom software development, web and mobile applications, cloud-based solutions, and business automation, Vedic Solutions helps organizations streamline operations, enhance productivity, and accelerate growth through impactful digital transformation.',
+    domains: [
+      'Custom Software Development',
+      'Web Development',
+      'Mobile Applications',
+      'Cloud Solutions',
+      'Business Automation',
+      'Digital Transformation',
+    ],
+    location: 'Kerala',
+    focus: 'Custom Software & Digital Innovation',
+  },
+  {
+    id: 'geocon-india',
+    name: 'GEOCON INDIA',
+    logo: '/assets/Startups/GEOCON-logo.png',
+    tagline: 'Advanced DC Power Systems for Critical Infrastructure',
+    description:
+      'GEOCON INDIA is a technology-driven company delivering advanced DC power systems and solutions for SCADA communication networks, electric substation protection, and industrial infrastructure. In collaboration with a leading Spanish technology partner, GEOCON introduces cutting-edge products to the Indian market, serving over 40 power utilities with plans to expand across Asia and the Middle East.',
+    domains: [
+      'DC Power Systems',
+      'SCADA Communication',
+      'Substation Protection',
+      'Industrial Infrastructure',
+      'Power Utilities',
+      'Energy Technology',
+    ],
+    location: 'Kerala',
+    focus: 'Power Systems & Energy Infrastructure',
   },
 ];
 
@@ -148,16 +183,22 @@ export default function CurrentCompaniesPage() {
                   </div>
 
                   {/* CTA Button */}
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-8 w-full py-3 px-4 bg-gradient-to-r from-[#FF3B3B] to-[#E82E2E] text-white font-semibold rounded-[12px] 
-                      transition-all duration-300 hover:shadow-[0_8px_20px_rgba(255,59,59,0.4)] hover:scale-105 
-                      active:scale-95 text-[14px] md:text-[15px] inline-flex items-center justify-center"
-                  >
-                    Learn More
-                  </a>
+                  {company.website ? (
+                    <a
+                      href={company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-8 w-full py-3 px-4 bg-gradient-to-r from-[#FF3B3B] to-[#E82E2E] text-white font-semibold rounded-[12px] 
+                        transition-all duration-300 hover:shadow-[0_8px_20px_rgba(255,59,59,0.4)] hover:scale-105 
+                        active:scale-95 text-[14px] md:text-[15px] inline-flex items-center justify-center"
+                    >
+                      Visit Website
+                    </a>
+                  ) : (
+                    <div className="mt-8 w-full py-3 px-4 bg-[#F5F5F5] text-[#9A9A9A] font-semibold rounded-[12px] text-[14px] md:text-[15px] inline-flex items-center justify-center cursor-default select-none">
+                      Website Coming Soon
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

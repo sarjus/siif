@@ -5,8 +5,17 @@ import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import { Card } from '@/components/ui/card';
 import CompanyShell from '@/components/CompanyShell';
-import { Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from 'lucide-react';
-import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatBillingMonth, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
+import { Building2, Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from 'lucide-react';
+import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatBillingMonth, formatCurrency, INVOICE_STATUS_COLORS, PAYMENT_MODE_OPTIONS, PaymentMode } from '@/lib/fee-management';
+
+const BANK_DETAILS = {
+  accountName: 'SJCET Innovation and Incubation Foundation',
+  accountNumber: '45112620593',
+  ifsc: 'SBIN0070350',
+  bank: 'State Bank of India',
+  branch: 'Bharananganam Branch',
+};
+
 
 type CompanyProfile = {
   id: string;
@@ -66,6 +75,19 @@ type Notification = {
   sent_at: string;
 };
 
+type PaymentSubmission = {
+  id: string;
+  amount_paid: number;
+  payment_mode: string;
+  transaction_reference: string | null;
+  payment_date: string;
+  remarks: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  receipt_number: string | null;
+  created_at: string;
+  incubation_fee_invoices?: { invoice_number: string | null; billing_month: string | null } | null;
+};
+
 export default function CompanyPaymentsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -76,6 +98,19 @@ export default function CompanyPaymentsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitNotice, setSubmitNotice] = useState<string | null>(null);
+  const [submitForm, setSubmitForm] = useState({
+    invoiceId: '',
+    amountPaid: '',
+    paymentMode: 'bank_transfer' as PaymentMode,
+    transactionReference: '',
+    paymentDate: new Date().toISOString().slice(0, 10),
+    remarks: '',
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -122,6 +157,15 @@ export default function CompanyPaymentsPage() {
       setInvoices((invoiceData || []) as Invoice[]);
       setCollections((collectionData || []) as Collection[]);
       setNotifications((notificationData || []) as Notification[]);
+
+      // Load company's payment submissions
+      const submissionsRes = await fetch(`/api/company/payment-submissions?companyId=${appData.id}`, {
+        headers: await getAuthHeaders(),
+      });
+      if (submissionsRes.ok) {
+        const submissionsPayload = await submissionsRes.json();
+        setSubmissions((submissionsPayload.submissions || []) as PaymentSubmission[]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load payment history');
     } finally {
@@ -134,6 +178,42 @@ export default function CompanyPaymentsPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!company) return;
+    if (!submitForm.amountPaid || !submitForm.paymentMode || !submitForm.paymentDate) {
+      setSubmitError('Amount, payment mode and date are required.');
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    setSubmitNotice(null);
+    try {
+      const response = await fetch('/api/company/payment-submissions', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: company.id,
+          invoiceId: submitForm.invoiceId || null,
+          amountPaid: Number(submitForm.amountPaid),
+          paymentMode: submitForm.paymentMode,
+          transactionReference: submitForm.transactionReference || null,
+          paymentDate: submitForm.paymentDate,
+          remarks: submitForm.remarks || null,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to submit payment details');
+      setSubmitNotice('Payment details submitted successfully. Admin will verify and generate your receipt.');
+      setSubmitForm({ invoiceId: '', amountPaid: '', paymentMode: 'bank_transfer', transactionReference: '', paymentDate: new Date().toISOString().slice(0, 10), remarks: '' });
+      setShowSubmitForm(false);
+      await loadData();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const notices = useMemo(() => {
@@ -232,6 +312,166 @@ export default function CompanyPaymentsPage() {
             </div>
           </Card>
         </div>
+
+        {/* Bank Account Details */}
+        <Card className="mb-6 rounded-lg border border-[#E3E7EE] bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="size-5 text-[#FF3B3B]" />
+            <h3 className="text-lg font-bold text-[#172033]">Payment Bank Account Details</h3>
+          </div>
+          <p className="mb-4 text-sm text-[#667085]">
+            Please transfer your fees to the following bank account and submit the payment details below for verification.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-[#E3E7EE] bg-[#F8FAFC] p-4 text-sm">
+            {[
+              ['Account Name', BANK_DETAILS.accountName],
+              ['Account Number', BANK_DETAILS.accountNumber],
+              ['IFSC Code', BANK_DETAILS.ifsc],
+              ['Bank', BANK_DETAILS.bank],
+              ['Branch', BANK_DETAILS.branch],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <p className="text-xs font-semibold uppercase text-[#8A8A8A]">{label}</p>
+                <p className="mt-0.5 font-semibold text-[#172033] select-all">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-xs text-[#8A8A8A]">After making the transfer, click the button to submit your payment details for admin verification.</p>
+            <button
+              onClick={() => { setShowSubmitForm((v) => !v); setSubmitError(null); setSubmitNotice(null); }}
+              className="ml-4 shrink-0 rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-all"
+            >
+              {showSubmitForm ? 'Cancel' : 'Submit Payment Details'}
+            </button>
+          </div>
+
+          {submitNotice && (
+            <div className="mt-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-medium text-[#1E7F46]">{submitNotice}</div>
+          )}
+
+          {showSubmitForm && (
+            <div className="mt-5 border-t border-[#E3E7EE] pt-5">
+              <h4 className="mb-4 font-bold text-[#172033]">Enter Payment Details</h4>
+              {submitError && <div className="mb-4 rounded-lg bg-[#FFF1F1] p-3 text-sm text-[#B42318]">{submitError}</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Invoice (optional)</label>
+                  <select
+                    value={submitForm.invoiceId}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, invoiceId: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  >
+                    <option value="">Select invoice (if applicable)</option>
+                    {invoices.filter((inv) => inv.status !== 'paid' && inv.status !== 'void').map((inv) => (
+                      <option key={inv.id} value={inv.id}>
+                        {inv.invoice_number} | {formatBillingMonth(inv.billing_month)} | Balance {formatCurrency(Number(inv.amount) - Number(inv.amount_paid))}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Amount Paid (₹)</label>
+                  <input
+                    type="number"
+                    value={submitForm.amountPaid}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, amountPaid: e.target.value }))}
+                    placeholder="Enter amount"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Payment Mode</label>
+                  <select
+                    value={submitForm.paymentMode}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, paymentMode: e.target.value as PaymentMode }))}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  >
+                    {PAYMENT_MODE_OPTIONS.map((mode) => (
+                      <option key={mode.value} value={mode.value}>{mode.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Transaction Reference / UTR</label>
+                  <input
+                    value={submitForm.transactionReference}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, transactionReference: e.target.value }))}
+                    placeholder="e.g. UTR number, cheque no."
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Payment Date</label>
+                  <input
+                    type="date"
+                    value={submitForm.paymentDate}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, paymentDate: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Remarks (optional)</label>
+                  <input
+                    value={submitForm.remarks}
+                    onChange={(e) => setSubmitForm((p) => ({ ...p, remarks: e.target.value }))}
+                    placeholder="Any additional notes"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleSubmitPayment}
+                disabled={submitting}
+                className="mt-4 rounded-lg bg-[#FF3B3B] px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Submit for Verification'}
+              </button>
+            </div>
+          )}
+        </Card>
+
+        {/* My Submission History */}
+        {submissions.length > 0 && (
+          <Card className="mb-6 overflow-hidden rounded-lg border border-[#E3E7EE] bg-white shadow-sm">
+            <div className="border-b border-[#E3E7EE] p-4">
+              <h3 className="text-lg font-bold text-[#172033]">My Payment Submissions</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ backgroundColor: '#F5F6F7' }}>
+                    {['Date', 'Invoice', 'Amount', 'Mode', 'UTR / Reference', 'Status'].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map((sub) => (
+                    <tr key={sub.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3 text-sm text-[#4A4A4A]">{sub.payment_date}</td>
+                      <td className="px-4 py-3 text-sm text-[#4A4A4A]">
+                        {sub.incubation_fee_invoices?.invoice_number || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[#4A4A4A]">{formatCurrency(sub.amount_paid)}</td>
+                      <td className="px-4 py-3 text-sm text-[#4A4A4A]">{sub.payment_mode.replace(/_/g, ' ')}</td>
+                      <td className="px-4 py-3 text-sm text-[#4A4A4A]">{sub.transaction_reference || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold text-white ${
+                          sub.status === 'approved' ? 'bg-[#16A34A]' :
+                          sub.status === 'rejected' ? 'bg-[#DC2626]' :
+                          'bg-[#F59E0B]'
+                        }`}>
+                          {sub.status === 'approved' ? `Approved${sub.receipt_number ? ` · ${sub.receipt_number}` : ''}` : sub.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         <Card className="mb-6 overflow-hidden rounded-lg border border-[#E3E7EE] bg-white shadow-sm">
           <div className="border-b border-[#E3E7EE] p-4"><h3 className="text-lg font-bold text-[#172033]">Outstanding Dues & Invoices</h3></div>

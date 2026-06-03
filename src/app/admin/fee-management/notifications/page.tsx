@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 
@@ -17,25 +17,25 @@ export default function FeeNotificationsPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [recipientType, setRecipientType] = useState('all');
-  const [companyId, setCompanyId] = useState('');
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       const session = await getSafeSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
+      if (!session) { router.push('/login'); return; }
       setUserEmail(session.user.email || '');
-      const [{ data: appRows }, { data: notificationRows }] = await Promise.all([
-        supabase.from('applications').select('id, business_name, email').eq('status', 'approved').order('business_name', { ascending: true }),
-        supabase.from('notifications').select('*, applications(business_name, email)').order('sent_at', { ascending: false }).limit(100),
-      ]);
-      setCompanies((appRows || []) as Company[]);
-      setNotifications(notificationRows || []);
+
+      const response = await fetch('/api/admin/fee-management/notifications', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to load notifications');
+
+      setCompanies(payload.companies || []);
+      setNotifications(payload.notifications || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
     } finally {
@@ -46,59 +46,35 @@ export default function FeeNotificationsPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const sendNotification = async () => {
-    if (!title || !message) {
-      setError('Enter both title and message.');
-      return;
-    }
+    if (!title || !message) { setError('Enter both title and message.'); return; }
+    if (recipientType === 'selected' && selectedCompanyIds.length === 0) { setError('Select at least one company.'); return; }
 
+    setSending(true);
     setError(null);
     setNotice(null);
 
     try {
-      let targetCompanies = companies;
-      if (recipientType === 'selected') {
-        if (selectedCompanyIds.length === 0) {
-          setError('Select at least one company.');
-          return;
-        }
-        targetCompanies = companies.filter((company) => selectedCompanyIds.includes(company.id));
-      } else if (recipientType === 'overdue') {
-        const { data: overdueInvoices } = await supabase.from('incubation_fee_invoices').select('company_id').eq('status', 'overdue');
-        const overdueIds = new Set((overdueInvoices || []).map((item) => item.company_id));
-        targetCompanies = companies.filter((company) => overdueIds.has(company.id));
-      } else if (recipientType === 'pending_deposits') {
-        const { data: pendingDeposits } = await supabase.from('company_deposits').select('company_id').eq('status', 'pending');
-        const pendingIds = new Set((pendingDeposits || []).map((item) => item.company_id));
-        targetCompanies = companies.filter((company) => pendingIds.has(company.id));
-      }
+      const response = await fetch('/api/admin/fee-management/notifications', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientType, selectedCompanyIds, title, message }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to send notification');
 
-      const rows = targetCompanies.map((company) => ({
-        title,
-        message,
-        recipient_type: recipientType,
-        company_id: company.id,
-        sent_by: userEmail,
-      }));
-
-      if (rows.length === 0) throw new Error('No matching companies found for this notification.');
-
-      const { error: insertError } = await supabase.from('notifications').insert(rows);
-      if (insertError) throw insertError;
-
-      setNotice(`Notification sent to ${rows.length} compan${rows.length === 1 ? 'y' : 'ies'}.`);
+      setNotice(`Notification sent to ${payload.sent} compan${payload.sent === 1 ? 'y' : 'ies'}.`);
       setTitle('');
       setMessage('');
       setSelectedCompanyIds([]);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send notification');
+    } finally {
+      setSending(false);
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
@@ -121,34 +97,13 @@ export default function FeeNotificationsPage() {
               <div className="rounded-lg border border-gray-200 max-h-52 overflow-y-auto p-2 space-y-1">
                 <div className="flex justify-between items-center mb-1 px-1">
                   <span className="text-xs font-semibold text-[#4A4A4A]">Select companies</span>
-                  <button
-                    type="button"
-                    className="text-xs text-[#2AA0D3] hover:underline"
-                    onClick={() =>
-                      setSelectedCompanyIds(
-                        selectedCompanyIds.length === companies.length
-                          ? []
-                          : companies.map((c) => c.id)
-                      )
-                    }
-                  >
+                  <button type="button" className="text-xs text-[#2AA0D3] hover:underline" onClick={() => setSelectedCompanyIds(selectedCompanyIds.length === companies.length ? [] : companies.map((c) => c.id))}>
                     {selectedCompanyIds.length === companies.length ? 'Deselect all' : 'Select all'}
                   </button>
                 </div>
                 {companies.map((company) => (
                   <label key={company.id} className="flex items-center gap-2 px-1 py-1 cursor-pointer rounded hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      className="accent-[#FF3B3B]"
-                      checked={selectedCompanyIds.includes(company.id)}
-                      onChange={(e) =>
-                        setSelectedCompanyIds((prev) =>
-                          e.target.checked
-                            ? [...prev, company.id]
-                            : prev.filter((id) => id !== company.id)
-                        )
-                      }
-                    />
+                    <input type="checkbox" className="accent-[#FF3B3B]" checked={selectedCompanyIds.includes(company.id)} onChange={(e) => setSelectedCompanyIds((prev) => e.target.checked ? [...prev, company.id] : prev.filter((id) => id !== company.id))} />
                     <span className="text-sm text-[#4A4A4A]">{company.business_name || company.email}</span>
                   </label>
                 ))}
@@ -156,7 +111,9 @@ export default function FeeNotificationsPage() {
             )}
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notification title" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
             <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} placeholder="Notification message" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
-            <button onClick={sendNotification} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700">Send Notification</button>
+            <button onClick={sendNotification} disabled={sending} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+              {sending ? 'Sending...' : 'Send Notification'}
+            </button>
           </div>
         </Card>
 
@@ -165,20 +122,22 @@ export default function FeeNotificationsPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: '#F5F6F7' }}>
-                  {['Sent At', 'Title', 'Recipient', 'Type', 'Sent By'].map((heading) => <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>)}
+                  {['Sent At', 'Title', 'Recipient', 'Type', 'Sent By'].map((h) => <th key={h} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {notifications.map((notification) => (
-                  <tr key={notification.id} className="border-t border-gray-200">
-                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{new Date(notification.sent_at).toLocaleString()}</td>
+                {notifications.length === 0 ? (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No notifications sent yet.</td></tr>
+                ) : notifications.map((n) => (
+                  <tr key={n.id} className="border-t border-gray-200">
+                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{new Date(n.sent_at).toLocaleString()}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">
-                      <div className="font-semibold">{notification.title}</div>
-                      <div className="text-xs text-[#8A8A8A]">{notification.message}</div>
+                      <div className="font-semibold">{n.title}</div>
+                      <div className="text-xs text-[#8A8A8A]">{n.message}</div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{notification.applications?.business_name || notification.applications?.email || 'All Matching Companies'}</td>
-                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{notification.recipient_type}</td>
-                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{notification.sent_by || '-'}</td>
+                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{n.applications?.business_name || n.applications?.email || 'All Matching Companies'}</td>
+                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{n.recipient_type}</td>
+                    <td className="px-4 py-4 text-sm text-[#4A4A4A]">{n.sent_by || '-'}</td>
                   </tr>
                 ))}
               </tbody>

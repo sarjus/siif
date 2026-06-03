@@ -115,14 +115,23 @@ export const formatCurrency = (amount: number | null | undefined) =>
   }).format(Number(amount || 0));
 
 export const formatBillingMonth = (value: string | Date) => {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  // Parse date-only strings (YYYY-MM-DD) as local date to avoid UTC timezone rollback
+  if (typeof value === 'string') {
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    const date = new Date(year, month - 1, day ?? 1);
+    return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  }
+  return value.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 };
 
 export const getMonthKey = (value: string | Date) => {
-  const date = typeof value === 'string' ? new Date(value) : value;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  // Parse date-only strings as local date to avoid UTC timezone rollback
+  if (typeof value === 'string') {
+    const [year, month] = value.slice(0, 10).split('-').map(Number);
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
 };
 
@@ -206,18 +215,57 @@ export const downloadReceiptPdf = (details: {
   paymentMode: string;
   transactionReference?: string | null;
   receivedBy?: string | null;
+  logoDataUrl?: string;
 }) => {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  doc.setFontSize(20);
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // --- Header block ---
+  const headerTop = 24;
+  const logoSize = 52;
+
+  // SIIF Logo (if provided)
+  if (details.logoDataUrl) {
+    doc.addImage(details.logoDataUrl, 'PNG', 32, headerTop, logoSize, logoSize);
+  }
+
+  const textX = 32 + logoSize + 12;
+
+  // Main heading: SJCET Innovation and Incubation Foundation
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
   doc.setTextColor(220, 38, 38);
-  doc.text('SIIF Incubator Receipt', 40, 50);
-  doc.setFontSize(11);
+  doc.text('SJCET Innovation and Incubation Foundation', textX, headerTop + 16);
+
+  // Address in small text
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
   doc.setTextColor(80, 80, 80);
-  doc.text('St. Joseph\'s College of Engineering and Technology, Palai', 40, 70);
+  doc.text("St.Joseph's College of Engineering & Technology Palai, Choondacherry PO, Meenachil Taluk,", textX, headerTop + 30);
+  doc.text('Kottayam, Kerala, India, 686579', textX, headerTop + 42);
+
+  // Divider
+  const dividerY = headerTop + logoSize + 10;
+  doc.setDrawColor(220, 38, 38);
+  doc.setLineWidth(1.5);
+  doc.line(32, dividerY, pageWidth - 32, dividerY);
+
+  // "Receipt" centered heading
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  const label = 'Receipt';
+  const labelWidth = doc.getTextWidth(label);
+  doc.text(label, (pageWidth - labelWidth) / 2, dividerY + 20);
+
+  // Format amount as plain text to avoid ₹ symbol rendering issues in PDF fonts
+  const amountFormatted = `INR ${Number(details.amountPaid).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+  // Capitalize payment mode
+  const paymentModeFormatted = (details.paymentMode || '').toUpperCase();
 
   autoTable(doc, {
-    startY: 100,
-    head: [['Field', 'Value']],
+    startY: dividerY + 40,
+    head: [['Details', 'Information']],
     body: [
       ['Receipt Number', details.receiptNumber],
       ['Receipt Date', details.receiptDate],
@@ -225,19 +273,30 @@ export const downloadReceiptPdf = (details: {
       ['Collection Type', details.collectionType],
       ['Invoice Number', details.invoiceNumber || 'N/A'],
       ['Billing Month', details.billingMonth || 'N/A'],
-      ['Deposit Reference', details.depositReference || 'N/A'],
-      ['Amount Paid', formatCurrency(details.amountPaid)],
-      ['Payment Mode', details.paymentMode],
+      ['Amount Paid', amountFormatted],
+      ['Payment Mode', paymentModeFormatted],
       ['Transaction Reference', details.transactionReference || 'N/A'],
-      ['Received By', details.receivedBy || 'N/A'],
+      ['Received By', 'CEO, SIIF'],
     ],
     theme: 'grid',
-    headStyles: { fillColor: [255, 59, 59] },
+    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
     styles: { fontSize: 10 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 160 },
+      1: { cellWidth: 'auto' },
+    },
     margin: { left: 40, right: 40 },
   });
 
-  doc.text('Authorized Signatory', 40, doc.internal.pageSize.getHeight() - 50);
+  // Electronic generation notice
+  const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || dividerY + 200;
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8.5);
+  doc.setTextColor(120, 120, 120);
+  const notice = 'This is an electronically generated receipt. No signature is required.';
+  const noticeWidth = doc.getTextWidth(notice);
+  doc.text(notice, (pageWidth - noticeWidth) / 2, finalY + 24);
+
   doc.save(`${details.receiptNumber}.pdf`);
 };
 

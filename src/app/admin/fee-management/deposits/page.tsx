@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
-import { buildReceiptNumber, computeDepositStatus, DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatCurrency, PAYMENT_MODE_OPTIONS } from '@/lib/fee-management';
+import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatCurrency, PAYMENT_MODE_OPTIONS } from '@/lib/fee-management';
 
 type Company = { id: string; business_name: string | null; email: string; };
 type DepositRow = {
@@ -38,17 +38,17 @@ export default function RecordDepositPage() {
   const loadData = useCallback(async () => {
     try {
       const session = await getSafeSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
+      if (!session) { router.push('/login'); return; }
       setUserEmail(session.user.email || '');
-      const [{ data: apps }, { data: depositRows }] = await Promise.all([
-        supabase.from('applications').select('id, business_name, email').eq('status', 'approved').order('business_name', { ascending: true }),
-        supabase.from('company_deposits').select('*, applications(business_name, email)').order('created_at', { ascending: false }),
-      ]);
-      setCompanies((apps || []) as Company[]);
-      setDeposits((depositRows || []) as DepositRow[]);
+
+      const response = await fetch('/api/admin/fee-management/deposits', {
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to load deposits');
+
+      setCompanies(payload.companies || []);
+      setDeposits(payload.deposits || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load deposit data');
     } finally {
@@ -58,8 +58,8 @@ export default function RecordDepositPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const selectedDeposit = useMemo(() => deposits.find((deposit) => deposit.company_id === form.companyId), [deposits, form.companyId]);
-  const selectedCompany = companies.find((company) => company.id === form.companyId);
+  const selectedDeposit = useMemo(() => deposits.find((d) => d.company_id === form.companyId), [deposits, form.companyId]);
+  const selectedCompany = companies.find((c) => c.id === form.companyId);
 
   const handleSave = async () => {
     if (!selectedDeposit || !form.amount) {
@@ -72,52 +72,42 @@ export default function RecordDepositPage() {
     setNotice(null);
 
     try {
-      const amount = Number(form.amount || 0);
-      const amountCollected = form.action === 'collect' ? Number(selectedDeposit.amount_collected || 0) + amount : Number(selectedDeposit.amount_collected || 0);
-      const amountRefunded = form.action === 'refund' ? Number(selectedDeposit.amount_refunded || 0) + amount : Number(selectedDeposit.amount_refunded || 0);
-      const status = computeDepositStatus({ depositAmount: Number(selectedDeposit.deposit_amount || 0), amountCollected, amountRefunded });
-
-      const { error: depositError } = await supabase
-        .from('company_deposits')
-        .update({
-          amount_collected: amountCollected,
-          amount_refunded: amountRefunded,
-          balance_amount: Math.max(Number(selectedDeposit.deposit_amount || 0) - amountCollected + amountRefunded, 0),
-          collection_date: form.action === 'collect' ? form.collectionDate : selectedDeposit.collection_date,
-          refund_date: form.action === 'refund' ? form.collectionDate : selectedDeposit.refund_date,
-          status,
-          remarks: form.remarks || selectedDeposit.remarks,
-        })
-        .eq('id', selectedDeposit.id);
-      if (depositError) throw depositError;
-
-      const receiptNumber = buildReceiptNumber();
-      const collectionType = form.action === 'collect' ? 'refundable_deposit' : 'deposit_refund';
-      const { error: collectionError } = await supabase.from('fee_collections').insert({
-        company_id: form.companyId,
-        receipt_number: receiptNumber,
-        collection_type: collectionType,
-        deposit_id: selectedDeposit.id,
-        collection_date: form.collectionDate,
-        amount_collected: amount,
-        payment_mode: form.paymentMode,
-        transaction_reference: form.transactionReference || null,
-        collected_by: userEmail,
-        remarks: form.remarks || null,
-        status: 'recorded',
+      const response = await fetch('/api/admin/fee-management/deposits', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: form.companyId,
+          depositId: selectedDeposit.id,
+          action: form.action,
+          amount: form.amount,
+          collectionDate: form.collectionDate,
+          paymentMode: form.paymentMode,
+          transactionReference: form.transactionReference || null,
+          remarks: form.remarks || null,
+          existingDeposit: {
+            deposit_amount: selectedDeposit.deposit_amount,
+            amount_collected: selectedDeposit.amount_collected,
+            amount_refunded: selectedDeposit.amount_refunded,
+            collection_date: selectedDeposit.collection_date,
+            refund_date: selectedDeposit.refund_date,
+            remarks: selectedDeposit.remarks,
+          },
+        }),
       });
-      if (collectionError) throw collectionError;
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to record deposit');
 
+      // Auto-download receipt
       downloadReceiptPdf({
-        receiptNumber,
-        receiptDate: form.collectionDate,
-        companyName: selectedCompany?.business_name || selectedCompany?.email || 'Company',
-        collectionType: form.action === 'collect' ? 'Refundable Deposit' : 'Deposit Refund',
-        depositReference: selectedDeposit.id,
-        amountPaid: amount,
-        paymentMode: PAYMENT_MODE_OPTIONS.find((mode) => mode.value === form.paymentMode)?.label || form.paymentMode,
-        transactionReference: form.transactionReference || null,
-        receivedBy: userEmail,
+        receiptNumber: payload.receipt.receiptNumber,
+        receiptDate: payload.receipt.receiptDate,
+        companyName: payload.receipt.companyName,
+        collectionType: payload.receipt.collectionType,
+        depositReference: payload.receipt.depositReference,
+        amountPaid: payload.receipt.amountPaid,
+        paymentMode: PAYMENT_MODE_OPTIONS.find((m) => m.value === payload.receipt.paymentMode)?.label || payload.receipt.paymentMode,
+        transactionReference: payload.receipt.transactionReference,
+        receivedBy: payload.receipt.receivedBy,
       });
 
       setNotice('Deposit transaction recorded successfully.');
@@ -130,10 +120,7 @@ export default function RecordDepositPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
@@ -151,11 +138,19 @@ export default function RecordDepositPage() {
               <select value={form.companyId} onChange={(e) => setForm((prev) => ({ ...prev, companyId: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2">
                 <option value="">Select company</option>
                 {deposits.map((deposit) => {
-                  const company = companies.find((item) => item.id === deposit.company_id);
+                  const company = companies.find((c) => c.id === deposit.company_id);
                   return <option key={deposit.id} value={deposit.company_id}>{company?.business_name || company?.email}</option>;
                 })}
               </select>
             </div>
+            {selectedDeposit && (
+              <div className="rounded-lg border border-[#E3E7EE] bg-[#F8FAFC] p-3 text-sm space-y-1">
+                <p><span className="font-medium">Configured Deposit:</span> {formatCurrency(selectedDeposit.deposit_amount)}</p>
+                <p><span className="font-medium">Collected:</span> {formatCurrency(selectedDeposit.amount_collected)}</p>
+                <p><span className="font-medium">Balance:</span> {formatCurrency(selectedDeposit.balance_amount)}</p>
+                <p><span className="font-medium">Status:</span> <span className="font-semibold">{selectedDeposit.status.replace('_', ' ')}</span></p>
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-sm font-medium">Action</label>
               <select value={form.action} onChange={(e) => setForm((prev) => ({ ...prev, action: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2">
@@ -174,12 +169,14 @@ export default function RecordDepositPage() {
             <div>
               <label className="mb-1 block text-sm font-medium">Payment Mode</label>
               <select value={form.paymentMode} onChange={(e) => setForm((prev) => ({ ...prev, paymentMode: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2">
-                {PAYMENT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {PAYMENT_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <input type="text" value={form.transactionReference} onChange={(e) => setForm((prev) => ({ ...prev, transactionReference: e.target.value }))} placeholder="Transaction reference" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
             <textarea value={form.remarks} onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2" rows={4} placeholder="Remarks" />
-            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">{saving ? 'Saving...' : 'Save Deposit Entry'}</button>
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+              {saving ? 'Saving...' : 'Save Deposit Entry'}
+            </button>
           </div>
         </Card>
 
@@ -188,18 +185,24 @@ export default function RecordDepositPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: '#F5F6F7' }}>
-                  {['Company', 'Configured Deposit', 'Collected', 'Refunded', 'Balance', 'Status'].map((heading) => <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>)}
+                  {['Company', 'Configured Deposit', 'Collected', 'Refunded', 'Balance', 'Status'].map((h) => <th key={h} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {deposits.map((deposit) => (
+                {deposits.length === 0 ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No deposit records found.</td></tr>
+                ) : deposits.map((deposit) => (
                   <tr key={deposit.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{deposit.applications?.business_name || deposit.applications?.email || '-'}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(deposit.deposit_amount)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(deposit.amount_collected)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(deposit.amount_refunded)}</td>
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(deposit.balance_amount)}</td>
-                    <td className="px-4 py-4"><span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: DEPOSIT_STATUS_COLORS[deposit.status] }}>{deposit.status.replace('_', ' ')}</span></td>
+                    <td className="px-4 py-4">
+                      <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: DEPOSIT_STATUS_COLORS[deposit.status] }}>
+                        {deposit.status.replace('_', ' ')}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

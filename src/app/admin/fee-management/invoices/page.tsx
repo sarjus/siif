@@ -24,6 +24,7 @@ export default function MonthlyInvoicesPage() {
   const [search, setSearch] = useState('');
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
+  const [fixingMonth, setFixingMonth] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -90,6 +91,30 @@ export default function MonthlyInvoicesPage() {
     }
   };
 
+  const handleFixBillingMonth = async (fromMonth: string, toMonth: string) => {
+    setFixingMonth(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/fee-management/update-billing-month', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromMonth, toMonth }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to update billing month');
+      }
+
+      alert(payload.message || 'Billing month updated successfully');
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update billing month');
+    } finally {
+      setFixingMonth(false);
+    }
+  };
+
   const handleDeleteInvoice = async (invoice: InvoiceRow) => {
     const confirmed = window.confirm(
       `Delete invoice ${invoice.invoice_number}? This will remove it from monthly invoices.`
@@ -133,9 +158,20 @@ export default function MonthlyInvoicesPage() {
       userEmail={userEmail}
       onLogout={handleLogout}
       headerActions={
-        <button onClick={handleSync} disabled={syncing} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold hover:bg-[#2289b5] disabled:opacity-50">
-          {syncing ? 'Syncing...' : 'Sync Invoices'}
-        </button>
+        <div className="flex gap-2">
+          {invoices.some((inv) => inv.billing_month?.startsWith('2026-05')) && (
+            <button
+              onClick={() => handleFixBillingMonth('2026-05-01', '2026-06-01')}
+              disabled={fixingMonth}
+              className="rounded-lg bg-[#F59E0B] px-4 py-2 text-white font-semibold hover:bg-[#D97706] disabled:opacity-50"
+            >
+              {fixingMonth ? 'Updating...' : 'Fix: May → June 2026'}
+            </button>
+          )}
+          <button onClick={handleSync} disabled={syncing} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold hover:bg-[#2289b5] disabled:opacity-50">
+            {syncing ? 'Syncing...' : 'Sync Invoices'}
+          </button>
+        </div>
       }
     >
       {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}

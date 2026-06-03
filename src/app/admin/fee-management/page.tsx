@@ -139,6 +139,7 @@ export default function FeeManagementOverviewPage() {
             ['Receipts', '/admin/fee-management/receipts'],
             ['Notifications', '/admin/fee-management/notifications'],
             ['Reports', '/admin/fee-management/reports'],
+            ['Payment Submissions', '/admin/fee-management/payment-submissions'],
           ].map(([label, href]) => (
             <a key={href} href={href} className="rounded-xl border border-[#E5E5E5] bg-[#FAFAFA] px-4 py-4 hover:border-[#FF3B3B] hover:bg-white transition-all" style={{ color: '#4A4A4A', fontWeight: 600 }}>
               {label}

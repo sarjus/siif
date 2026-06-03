@@ -43,3 +43,5 @@ yarn-error.log*
 next-env.d.ts
 
 *.md
+billing_month_migration_may_to_june_2026.sql
+.gitignore

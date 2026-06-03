@@ -37,16 +37,13 @@ const getAdminClient = () => {
   });
 };
 
-const getFirstInvoiceMonth = (startDate: string, dueDay: number) => {
-  const start = new Date(startDate);
-  const month = new Date(start.getFullYear(), start.getMonth(), 1);
-  if (start.getDate() > dueDay) {
-    month.setMonth(month.getMonth() + 1);
-  }
-  return month;
-};
 
-const toDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+const toDateOnly = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -84,66 +81,75 @@ export async function POST(request: NextRequest) {
     const { data: settings, error: settingsError } = await settingsQuery;
     if (settingsError) throw settingsError;
 
+    // Load existing invoices to check for duplicates
     const { data: existingInvoices, error: invoicesError } = await supabaseAdmin
       .from('incubation_fee_invoices')
       .select('id, company_id, invoice_number, billing_month, amount, amount_paid, due_date, status');
     if (invoicesError) throw invoicesError;
 
+    // Build a map keyed by company_id + YYYY-MM (month-only, no day)
+    // This avoids mismatches caused by old records stored as 2026-05-31 vs new 2026-06-01
     const invoiceMap = new Map<string, InvoiceRecord>();
     (existingInvoices || []).forEach((invoice) => {
-      invoiceMap.set(`${invoice.company_id}:${invoice.billing_month}`, invoice as InvoiceRecord);
+      const monthKey = (invoice.billing_month as string).slice(0, 7); // "YYYY-MM"
+      invoiceMap.set(`${invoice.company_id}:${monthKey}`, invoice as InvoiceRecord);
     });
 
     const createdInvoices: Array<Record<string, unknown>> = [];
     const updatedInvoices: Array<Record<string, unknown>> = [];
+
     const now = new Date();
+    // Current month = first day of this month (local time)
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     for (const setting of (settings || []) as FeeSetting[]) {
-      const firstMonth = getFirstInvoiceMonth(setting.start_date, setting.due_day);
-      const cursor = new Date(firstMonth);
+      // Only generate invoice for the current month — no backfilling old months
+      const billingMonth = toDateOnly(currentMonth); // e.g. "2026-06-01"
+      const billingMonthKey = currentMonthKey;        // e.g. "2026-06"
+      const dueDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), setting.due_day);
+      const mapKey = `${setting.company_id}:${billingMonthKey}`;
+      const existing = invoiceMap.get(mapKey);
 
-      while (cursor <= currentMonth) {
-        const billingMonth = toDateOnly(cursor);
-        const dueDate = new Date(cursor.getFullYear(), cursor.getMonth(), setting.due_day);
-        const mapKey = `${setting.company_id}:${billingMonth}`;
-        const existing = invoiceMap.get(mapKey);
+      // Skip if company's fee start date is after current month
+      const [startY, startM] = setting.start_date.slice(0, 7).split('-').map(Number);
+      const startMonthFirst = new Date(startY, startM - 1, 1);
+      if (startMonthFirst > currentMonth) {
+        continue;
+      }
 
-        if (!existing) {
-          createdInvoices.push({
-            company_id: setting.company_id,
-            invoice_number: buildInvoiceNumber(setting.company_id, billingMonth),
-            billing_month: billingMonth,
+      if (!existing) {
+        // No invoice for this month yet — create it
+        createdInvoices.push({
+          company_id: setting.company_id,
+          invoice_number: buildInvoiceNumber(setting.company_id, billingMonth),
+          billing_month: billingMonth,
+          amount: setting.monthly_fee,
+          amount_paid: 0,
+          due_date: toDateOnly(dueDate),
+          status: computeInvoiceStatus({
             amount: setting.monthly_fee,
-            amount_paid: 0,
-            due_date: toDateOnly(dueDate),
-            status: computeInvoiceStatus({
-              amount: setting.monthly_fee,
-              amountPaid: 0,
-              dueDate: toDateOnly(dueDate),
-              gracePeriodDays: setting.grace_period_days,
-            }),
-          });
-        } else {
-          // Never overwrite a voided invoice
-          if (existing.status === 'void') {
-            cursor.setMonth(cursor.getMonth() + 1);
-            continue;
-          }
-
-          const computedStatus = computeInvoiceStatus({
-            amount: Number(existing.amount || 0),
-            amountPaid: Number(existing.amount_paid || 0),
-            dueDate: existing.due_date,
+            amountPaid: 0,
+            dueDate: toDateOnly(dueDate),
             gracePeriodDays: setting.grace_period_days,
-          });
-
-          if (computedStatus !== existing.status) {
-            updatedInvoices.push({ id: existing.id, status: computedStatus });
-          }
+          }),
+        });
+      } else {
+        // Invoice exists — skip voided ones, update status of others
+        if (existing.status === 'void') {
+          continue;
         }
 
-        cursor.setMonth(cursor.getMonth() + 1);
+        const computedStatus = computeInvoiceStatus({
+          amount: Number(existing.amount || 0),
+          amountPaid: Number(existing.amount_paid || 0),
+          dueDate: existing.due_date,
+          gracePeriodDays: setting.grace_period_days,
+        });
+
+        if (computedStatus !== existing.status) {
+          updatedInvoices.push({ id: existing.id, status: computedStatus });
+        }
       }
     }
 

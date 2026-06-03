@@ -15,6 +15,7 @@ import {
   LogOut,
   ReceiptText,
   Settings,
+  Upload,
   Users,
   WalletCards,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ const navSections = [
       { label: 'Receipts', href: '/admin/fee-management/receipts', description: 'View and reprint receipts', icon: ReceiptText },
       { label: 'Notifications', href: '/admin/fee-management/notifications', description: 'Reminders and messages', icon: Bell },
       { label: 'Reports', href: '/admin/fee-management/reports', description: 'Analytics and export', icon: FileBarChart },
+      { label: 'Payment Submissions', href: '/admin/fee-management/payment-submissions', description: 'Verify company payments', icon: Upload },
     ],
   },
 ];
