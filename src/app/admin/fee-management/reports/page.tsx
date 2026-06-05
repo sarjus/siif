@@ -46,6 +46,16 @@ type StaffPaymentRow = {
   siif_staff?: { name: string; designation: string } | null;
 };
 
+type LedgerRow = {
+  id: string;
+  entry_date: string;
+  particulars: string;
+  debit: number;
+  credit: number;
+  category: string | null;
+  reference: string | null;
+};
+
 export default function FeeReportsPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState('');
@@ -54,6 +64,7 @@ export default function FeeReportsPage() {
   const [invoices, setInvoices] = useState<InvoiceReportRow[]>([]);
   const [deposits, setDeposits] = useState<DepositReportRow[]>([]);
   const [staffPayments, setStaffPayments] = useState<StaffPaymentRow[]>([]);
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -75,6 +86,7 @@ export default function FeeReportsPage() {
       setCollections((payload.collections || []) as CollectionReportRow[]);
       setInvoices((payload.invoices || []) as InvoiceReportRow[]);
       setDeposits((payload.deposits || []) as DepositReportRow[]);
+      setLedger((payload.ledger || []) as LedgerRow[]);
 
       if (staffRes.ok) {
         const staffPayload = await staffRes.json();
@@ -105,7 +117,9 @@ export default function FeeReportsPage() {
     }), [invoices]);
 
   const depositRows = useMemo(() =>
-    deposits.map((item) => [item.applications?.business_name || '-', formatCurrency(item.deposit_amount), formatCurrency(item.amount_collected), formatCurrency(item.amount_refunded), formatCurrency(item.balance_amount), item.status]),
+    deposits
+      .filter((item) => Number(item.deposit_amount || 0) > 0)
+      .map((item) => [item.applications?.business_name || '-', formatCurrency(item.deposit_amount), formatCurrency(item.amount_collected), formatCurrency(item.amount_refunded), formatCurrency(item.balance_amount), item.status]),
     [deposits]);
 
   const staffPaymentRows = useMemo(() =>
@@ -121,6 +135,29 @@ export default function FeeReportsPage() {
       p.transaction_reference || '-',
     ]),
     [staffPayments]);
+
+  // Ledger rows with running balance
+  const ledgerRows = useMemo(() => {
+    let balance = 0;
+    return ledger.map((e) => {
+      balance += Number(e.credit || 0) - Number(e.debit || 0);
+      const balanceStr = `${formatCurrency(Math.abs(balance))} ${balance >= 0 ? 'Cr' : 'Dr'}`;
+      return [
+        e.entry_date,
+        e.particulars,
+        e.category || '-',
+        e.reference || '-',
+        e.debit > 0 ? formatCurrency(e.debit) : '-',
+        e.credit > 0 ? formatCurrency(e.credit) : '-',
+        balanceStr,
+      ];
+    });
+  }, [ledger]);
+
+  const ledgerTotals = useMemo(() => ({
+    debit: ledger.reduce((s, e) => s + Number(e.debit || 0), 0),
+    credit: ledger.reduce((s, e) => s + Number(e.credit || 0), 0),
+  }), [ledger]);
 
   const totalStaffPaid = useMemo(() =>
     staffPayments.reduce((s, p) => s + Number(p.amount || 0), 0), [staffPayments]);
@@ -172,6 +209,29 @@ export default function FeeReportsPage() {
         </span>
       </Card>
 
+      {/* Ledger summary card */}
+      {ledger.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="border-0 shadow p-5">
+            <p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">Ledger Total Debit</p>
+            <p className="text-2xl font-bold text-[#DC2626]">{formatCurrency(ledgerTotals.debit)}</p>
+          </Card>
+          <Card className="border-0 shadow p-5">
+            <p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">Ledger Total Credit</p>
+            <p className="text-2xl font-bold text-[#16A34A]">{formatCurrency(ledgerTotals.credit)}</p>
+          </Card>
+          <Card className="border-0 shadow p-5">
+            <p className="mb-1 text-xs font-semibold uppercase text-[#8A8A8A]">Ledger Net Balance</p>
+            <p className="text-2xl font-bold" style={{ color: ledgerTotals.credit - ledgerTotals.debit >= 0 ? '#16A34A' : '#DC2626' }}>
+              {formatCurrency(Math.abs(ledgerTotals.credit - ledgerTotals.debit))}
+              <span className="ml-1 text-sm font-normal text-[#8A8A8A]">
+                {ledgerTotals.credit - ledgerTotals.debit >= 0 ? 'Cr' : 'Dr'}
+              </span>
+            </p>
+          </Card>
+        </div>
+      )}
+
       {/* Report tables */}
       <div className="space-y-6">
         {[
@@ -208,6 +268,71 @@ export default function FeeReportsPage() {
             </div>
           </Card>
         ))}
+
+        {/* Ledger Report — custom card with totals row */}
+        <Card className="border-0 shadow p-6">
+          <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <h3 className="text-lg font-bold" style={{ color: '#FF3B3B' }}>Ledger Report</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => exportCsv('ledger-report.csv',
+                  ['Date', 'Particulars', 'Category', 'Reference', 'Debit', 'Credit', 'Balance'],
+                  ledgerRows
+                )}
+                className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">
+                Export Excel
+              </button>
+              <button
+                onClick={() => handleExportPdf('Ledger Report',
+                  ['Date', 'Particulars', 'Category', 'Reference', 'Debit', 'Credit', 'Balance'],
+                  ledgerRows
+                )}
+                className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">
+                Export PDF
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: '#F5F6F7' }}>
+                  {['Date', 'Particulars', 'Category', 'Reference', 'Debit', 'Credit', 'Balance'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerRows.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-[#8A8A8A]">No ledger entries available.</td></tr>
+                ) : (
+                  <>
+                    {ledgerRows.map((row, i) => (
+                      <tr key={`ledger-${i}`} className={`border-t border-gray-200 ${i % 2 === 0 ? '' : 'bg-[#FAFAFA]'}`}>
+                        {row.map((cell, j) => (
+                          <td key={j} className={`px-4 py-3 text-sm ${j === 4 && String(cell) !== '-' ? 'font-semibold text-[#DC2626]' : j === 5 && String(cell) !== '-' ? 'font-semibold text-[#16A34A]' : j === 6 ? 'font-bold text-[#172033]' : 'text-[#4A4A4A]'}`}>
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    {/* Totals row */}
+                    <tr className="border-t-2 border-[#172033] bg-[#F5F6F7]">
+                      <td colSpan={4} className="px-4 py-3 text-sm font-bold text-[#172033]">TOTAL</td>
+                      <td className="px-4 py-3 text-sm font-bold text-[#DC2626]">{formatCurrency(ledgerTotals.debit)}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-[#16A34A]">{formatCurrency(ledgerTotals.credit)}</td>
+                      <td className="px-4 py-3 text-sm font-bold" style={{ color: ledgerTotals.credit - ledgerTotals.debit >= 0 ? '#16A34A' : '#DC2626' }}>
+                        {formatCurrency(Math.abs(ledgerTotals.credit - ledgerTotals.debit))}
+                        <span className="ml-1 text-xs font-normal text-[#8A8A8A]">
+                          {ledgerTotals.credit - ledgerTotals.debit >= 0 ? 'Cr' : 'Dr'}
+                        </span>
+                      </td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </div>
     </AdminShell>
   );

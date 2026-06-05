@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       { data: collectionsData, error: collectionsError },
       { data: invoiceData, error: invoicesError },
       { data: depositData, error: depositsError },
+      { data: ledgerData, error: ledgerError },
     ] = await Promise.all([
       supabaseAdmin
         .from('fee_collections')
@@ -32,24 +33,23 @@ export async function GET(request: NextRequest) {
         .from('company_deposits')
         .select('*, applications(business_name)')
         .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('siif_ledger')
+        .select('*')
+        .order('entry_date', { ascending: true })
+        .order('created_at', { ascending: true }),
     ]);
 
-    if (collectionsError) {
-      return NextResponse.json({ error: collectionsError.message }, { status: 400 });
-    }
-
-    if (invoicesError) {
-      return NextResponse.json({ error: invoicesError.message }, { status: 400 });
-    }
-
-    if (depositsError) {
-      return NextResponse.json({ error: depositsError.message }, { status: 400 });
-    }
+    if (collectionsError) return NextResponse.json({ error: collectionsError.message }, { status: 400 });
+    if (invoicesError) return NextResponse.json({ error: invoicesError.message }, { status: 400 });
+    if (depositsError) return NextResponse.json({ error: depositsError.message }, { status: 400 });
+    if (ledgerError) return NextResponse.json({ error: ledgerError.message }, { status: 400 });
 
     return NextResponse.json({
       collections: collectionsData || [],
       invoices: invoiceData || [],
       deposits: depositData || [],
+      ledger: ledgerData || [],
     });
   } catch (err) {
     return NextResponse.json(

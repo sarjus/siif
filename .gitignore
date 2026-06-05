@@ -47,3 +47,4 @@ billing_month_migration_may_to_june_2026.sql
 .gitignore
 fee_revision_schema.sql
 .gitignore
+ledger_schema.sql

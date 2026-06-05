@@ -20,6 +20,7 @@ import {
   WalletCards,
   Banknote,
   CalendarDays,
+  BookOpen,
 } from 'lucide-react';
 
 type AdminShellProps = {
@@ -66,6 +67,12 @@ const navSections = [
     title: 'Facilities',
     items: [
       { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
+    ],
+  },
+  {
+    title: 'Finance',
+    items: [
+      { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — income & expenditure', icon: BookOpen },
     ],
   },
 ];

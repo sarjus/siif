@@ -7,6 +7,7 @@ import AdminShell from '@/components/AdminShell';
 import {
   Bell,
   Banknote,
+  BookOpen,
   CalendarDays,
   ClipboardList,
   CreditCard,
@@ -69,6 +70,14 @@ const sections: Section[] = [
     bg: '#F5F3FF',
     items: [
       { label: 'Conference Room', description: 'Manage room bookings and requests', href: '/admin/conference', icon: CalendarDays },
+    ],
+  },
+  {
+    title: 'Finance',
+    color: '#0F766E',
+    bg: '#F0FDFA',
+    items: [
+      { label: 'Ledger', description: 'General ledger — track all income and expenditure', href: '/admin/ledger', icon: BookOpen },
     ],
   },
 ];
