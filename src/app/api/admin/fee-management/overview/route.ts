@@ -112,7 +112,11 @@ export async function GET(request: NextRequest) {
       charts: {
         invoiceStatus: invoiceStatusCounts,
         monthlyCollections,
-        companyBreakdown: Object.values(companyMap),
+        companyBreakdown: Object.values(companyMap).map((c) => ({
+      label: c.name,
+      paid: c.paid,
+      outstanding: c.outstanding,
+    })),
         collectionTypes,
       },
     });

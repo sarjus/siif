@@ -134,7 +134,7 @@ function HorizontalBarChart({ bars, colors }: {
 type Charts = {
   invoiceStatus: Record<string, number>;
   monthlyCollections: Record<string, number>;
-  companyBreakdown: { name: string; paid: number; outstanding: number }[];
+  companyBreakdown: { label: string; paid: number; outstanding: number }[];
   collectionTypes: Record<string, number>;
 };
 
