@@ -38,41 +38,41 @@ const navSections = [
     title: 'Core',
     items: [
       { label: 'Dashboard', href: '/admin/dashboard', description: 'System overview', icon: LayoutDashboard },
-      { label: 'Applications', href: '/admin/applications', description: 'Track submissions', icon: ClipboardList },
+      { label: 'Applications', href: '/admin/applications', description: 'Track & manage submissions', icon: ClipboardList },
       { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts', icon: Users },
     ],
   },
   {
-    title: 'Fee Management',
+    title: 'Incubation Fees',
     items: [
-      { label: 'Overview', href: '/admin/fee-management', description: 'Collection dashboard', icon: Gauge },
-      { label: 'Fee Configuration', href: '/admin/fee-management/configuration', description: 'Per company plans', icon: Settings },
-      { label: 'Monthly Invoices', href: '/admin/fee-management/invoices', description: 'Invoice generation and status', icon: FileText },
-      { label: 'Record Payment', href: '/admin/fee-management/payments', description: 'Capture fee payments', icon: CreditCard },
+      { label: 'Fee Configuration', href: '/admin/fee-management/configuration', description: 'Set per-company fee plans', icon: Settings },
+      { label: 'Monthly Invoices', href: '/admin/fee-management/invoices', description: 'Invoice generation & status', icon: FileText },
+      { label: 'Payment Submissions', href: '/admin/fee-management/payment-submissions', description: 'Verify company payment proofs', icon: Upload },
+    ],
+  },
+  {
+    title: 'Collections',
+    items: [
+      { label: 'Record Payment', href: '/admin/fee-management/payments', description: 'Capture incoming fee payments', icon: CreditCard },
       { label: 'Record Deposit', href: '/admin/fee-management/deposits', description: 'Manage refundable deposits', icon: Landmark },
-      { label: 'Transactions', href: '/admin/fee-management/transactions', description: 'All collection records', icon: WalletCards },
+      { label: 'Transactions', href: '/admin/fee-management/transactions', description: 'Full income & expenditure history', icon: WalletCards },
       { label: 'Receipts', href: '/admin/fee-management/receipts', description: 'View and reprint receipts', icon: ReceiptText },
-      { label: 'Notifications', href: '/admin/fee-management/notifications', description: 'Reminders and messages', icon: Bell },
+      { label: 'Notifications', href: '/admin/fee-management/notifications', description: 'Send payment reminders', icon: Bell },
+    ],
+  },
+  {
+    title: 'Finance & Reports',
+    items: [
+      { label: 'Overview', href: '/admin/fee-management', description: 'Fee collection dashboard', icon: Gauge },
       { label: 'Reports', href: '/admin/fee-management/reports', description: 'Analytics and export', icon: FileBarChart },
-      { label: 'Payment Submissions', href: '/admin/fee-management/payment-submissions', description: 'Verify company payments', icon: Upload },
+      { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — debit & credit', icon: BookOpen },
     ],
   },
   {
-    title: 'Staff & Payroll',
+    title: 'HR & Facilities',
     items: [
-      { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium payments', icon: Banknote },
-    ],
-  },
-  {
-    title: 'Facilities',
-    items: [
+      { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: Banknote },
       { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
-    ],
-  },
-  {
-    title: 'Finance',
-    items: [
-      { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — income & expenditure', icon: BookOpen },
     ],
   },
 ];

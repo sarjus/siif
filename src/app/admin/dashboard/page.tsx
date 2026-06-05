@@ -40,44 +40,44 @@ const sections: Section[] = [
     ],
   },
   {
-    title: 'Fee Management',
+    title: 'Incubation Fees',
     color: '#1D4ED8',
     bg: '#EFF6FF',
     items: [
-      { label: 'Overview', description: 'Fee collection dashboard and summaries', href: '/admin/fee-management', icon: Gauge },
       { label: 'Fee Configuration', description: 'Set per-company monthly fee plans', href: '/admin/fee-management/configuration', icon: Settings },
       { label: 'Monthly Invoices', description: 'Invoice generation and payment status', href: '/admin/fee-management/invoices', icon: FileText },
+      { label: 'Payment Submissions', description: 'Verify company-submitted payment proofs', href: '/admin/fee-management/payment-submissions', icon: Upload },
+    ],
+  },
+  {
+    title: 'Collections',
+    color: '#B45309',
+    bg: '#FFFBEB',
+    items: [
       { label: 'Record Payment', description: 'Capture incoming fee payments', href: '/admin/fee-management/payments', icon: CreditCard },
       { label: 'Record Deposit', description: 'Manage refundable security deposits', href: '/admin/fee-management/deposits', icon: Landmark },
       { label: 'Transactions', description: 'Full income and expenditure history', href: '/admin/fee-management/transactions', icon: WalletCards },
       { label: 'Receipts', description: 'View, download and reprint receipts', href: '/admin/fee-management/receipts', icon: ReceiptText },
       { label: 'Notifications', description: 'Send payment reminders to companies', href: '/admin/fee-management/notifications', icon: Bell },
-      { label: 'Reports', description: 'Analytics, exports and financial reports', href: '/admin/fee-management/reports', icon: FileBarChart },
-      { label: 'Payment Submissions', description: 'Verify company-submitted payment proofs', href: '/admin/fee-management/payment-submissions', icon: Upload },
     ],
   },
   {
-    title: 'Staff & Payroll',
+    title: 'Finance & Reports',
     color: '#059669',
     bg: '#ECFDF5',
     items: [
-      { label: 'Staff Payments', description: 'Salary and honorarium disbursements', href: '/admin/staff-payments', icon: Banknote },
+      { label: 'Overview', description: 'Fee collection dashboard and summaries', href: '/admin/fee-management', icon: Gauge },
+      { label: 'Reports', description: 'Analytics, exports and financial reports', href: '/admin/fee-management/reports', icon: FileBarChart },
+      { label: 'Ledger', description: 'General ledger — track debit & credit', href: '/admin/ledger', icon: BookOpen },
     ],
   },
   {
-    title: 'Facilities',
+    title: 'HR & Facilities',
     color: '#7C3AED',
     bg: '#F5F3FF',
     items: [
+      { label: 'Staff Payments', description: 'Salary and honorarium disbursements', href: '/admin/staff-payments', icon: Banknote },
       { label: 'Conference Room', description: 'Manage room bookings and requests', href: '/admin/conference', icon: CalendarDays },
-    ],
-  },
-  {
-    title: 'Finance',
-    color: '#0F766E',
-    bg: '#F0FDFA',
-    items: [
-      { label: 'Ledger', description: 'General ledger — track all income and expenditure', href: '/admin/ledger', icon: BookOpen },
     ],
   },
 ];
