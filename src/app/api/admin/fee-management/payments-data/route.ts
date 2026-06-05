@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
-import { buildReceiptNumber, computeInvoiceStatus } from '@/lib/fee-management';
+import { computeInvoiceStatus } from '@/lib/fee-management';
+import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const receiptNumber = buildReceiptNumber();
+    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
     const { error: insertError } = await supabaseAdmin.from('fee_collections').insert({
       company_id: companyId,
       receipt_number: receiptNumber,

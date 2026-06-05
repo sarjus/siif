@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
-import { buildReceiptNumber, computeDepositStatus } from '@/lib/fee-management';
+import { computeDepositStatus } from '@/lib/fee-management';
+import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     if (depositError) return NextResponse.json({ error: depositError.message }, { status: 400 });
 
-    const receiptNumber = buildReceiptNumber();
+    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
     const collectionType = action === 'collect' ? 'refundable_deposit' : 'deposit_refund';
 
     const { error: collectionError } = await supabaseAdmin.from('fee_collections').insert({

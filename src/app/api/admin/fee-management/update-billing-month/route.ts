@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
-import { buildInvoiceNumber } from '@/lib/fee-management';
+import { nextInvoiceNumber } from '@/lib/sequential-numbers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       // Parse due_date components to preserve the due day in the new month
       const [, , dueDay] = invoice.due_date.slice(0, 10).split('-').map(Number);
       const newDueDateStr = `${toYear}-${String(toMon).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}`;
-      const newInvoiceNumber = buildInvoiceNumber(invoice.company_id, toMonth);
+      const newInvoiceNumber = await nextInvoiceNumber(supabaseAdmin, toYear);
 
       // Check if target billing_month already exists for this company (to avoid unique constraint violation)
       const { data: conflict } = await supabaseAdmin

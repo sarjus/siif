@@ -18,6 +18,7 @@ import {
   Upload,
   Users,
   WalletCards,
+  Banknote,
 } from 'lucide-react';
 
 type AdminShellProps = {
@@ -52,6 +53,12 @@ const navSections = [
       { label: 'Notifications', href: '/admin/fee-management/notifications', description: 'Reminders and messages', icon: Bell },
       { label: 'Reports', href: '/admin/fee-management/reports', description: 'Analytics and export', icon: FileBarChart },
       { label: 'Payment Submissions', href: '/admin/fee-management/payment-submissions', description: 'Verify company payments', icon: Upload },
+    ],
+  },
+  {
+    title: 'Staff & Payroll',
+    items: [
+      { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium payments', icon: Banknote },
     ],
   },
 ];

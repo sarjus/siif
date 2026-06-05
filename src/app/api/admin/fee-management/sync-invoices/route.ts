@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { buildInvoiceNumber, computeInvoiceStatus } from '@/lib/fee-management';
+import { computeInvoiceStatus } from '@/lib/fee-management';
 import { getCompanyApplicationIdForUser, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
+import { nextInvoiceNumber } from '@/lib/sequential-numbers';
 
 type FeeSetting = {
   id: string;
@@ -120,9 +121,10 @@ export async function POST(request: NextRequest) {
 
       if (!existing) {
         // No invoice for this month yet — create it
+        const invoiceNumber = await nextInvoiceNumber(supabaseAdmin, currentMonth.getFullYear());
         createdInvoices.push({
           company_id: setting.company_id,
-          invoice_number: buildInvoiceNumber(setting.company_id, billingMonth),
+          invoice_number: invoiceNumber,
           billing_month: billingMonth,
           amount: setting.monthly_fee,
           amount_paid: 0,

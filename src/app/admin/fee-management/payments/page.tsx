@@ -6,7 +6,6 @@ import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import {
-  buildReceiptNumber,
   COLLECTION_TYPE_OPTIONS,
   CollectionType,
   computeInvoiceStatus,

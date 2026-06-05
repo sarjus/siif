@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
-import { buildInvoiceNumber } from '@/lib/fee-management';
+import { nextInvoiceNumber } from '@/lib/sequential-numbers';
 
 type CompanyProfile = {
   id: string;
@@ -163,24 +163,38 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
     (existingInvoices || []).map((row) => `${row.company_id}:${row.billing_month}`)
   );
 
-  const invoicesToCreate = eligibleSettings
-    .filter((setting) => !existingKeys.has(`${setting.company_id}:${billingMonth}`))
-    .map((setting) => {
-      const dueDate = new Date(
-        Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), setting.due_day)
-      );
+  const invoicesToCreate: Array<{
+    company_id: string;
+    invoice_number: string;
+    billing_month: string;
+    amount: number;
+    amount_paid: number;
+    due_date: string;
+    status: string;
+    remarks: string;
+  }> = [];
 
-      return {
-        company_id: setting.company_id,
-        invoice_number: buildInvoiceNumber(setting.company_id, billingMonth),
-        billing_month: billingMonth,
-        amount: Number(setting.monthly_fee || 0),
-        amount_paid: 0,
-        due_date: toDateOnlyUtc(dueDate),
-        status: 'pending',
-        remarks: 'Auto-generated on month start.',
-      };
+  for (const setting of eligibleSettings.filter(
+    (s) => !existingKeys.has(`${s.company_id}:${billingMonth}`)
+  )) {
+    const dueDate = new Date(
+      Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), setting.due_day)
+    );
+    const invoiceNumber = await nextInvoiceNumber(
+      supabaseAdmin,
+      monthStart.getUTCFullYear()
+    );
+    invoicesToCreate.push({
+      company_id: setting.company_id,
+      invoice_number: invoiceNumber,
+      billing_month: billingMonth,
+      amount: Number(setting.monthly_fee || 0),
+      amount_paid: 0,
+      due_date: toDateOnlyUtc(dueDate),
+      status: 'pending',
+      remarks: 'Auto-generated on month start.',
     });
+  }
 
   let createdInvoices: CreatedInvoice[] = [];
   if (invoicesToCreate.length > 0) {

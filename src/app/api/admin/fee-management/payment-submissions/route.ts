@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
-import { buildReceiptNumber, computeInvoiceStatus } from '@/lib/fee-management';
+import { computeInvoiceStatus } from '@/lib/fee-management';
+import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
 // Admin: list all pending payment submissions
 export async function GET(request: NextRequest) {
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Approve: create fee_collection record and update invoice if applicable
-    const receiptNumber = buildReceiptNumber();
+    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
     const amount = Number(submission.amount_paid || 0);
 
     let invoiceNumber: string | null = null;
