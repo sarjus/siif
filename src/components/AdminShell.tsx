@@ -19,6 +19,7 @@ import {
   Users,
   WalletCards,
   Banknote,
+  CalendarDays,
 } from 'lucide-react';
 
 type AdminShellProps = {
@@ -35,8 +36,8 @@ const navSections = [
   {
     title: 'Core',
     items: [
-      { label: 'Dashboard', href: '/admin/dashboard', description: 'Overview and applications', icon: LayoutDashboard },
-      { label: 'Applications', href: '/admin/dashboard', description: 'Track submissions', icon: ClipboardList },
+      { label: 'Dashboard', href: '/admin/dashboard', description: 'System overview', icon: LayoutDashboard },
+      { label: 'Applications', href: '/admin/applications', description: 'Track submissions', icon: ClipboardList },
       { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts', icon: Users },
     ],
   },
@@ -59,6 +60,12 @@ const navSections = [
     title: 'Staff & Payroll',
     items: [
       { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium payments', icon: Banknote },
+    ],
+  },
+  {
+    title: 'Facilities',
+    items: [
+      { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
     ],
   },
 ];
@@ -89,7 +96,9 @@ export default function AdminShell({
                 <p className="mb-2 px-2 text-[11px] font-bold uppercase text-[#8A8A8A]">{section.title}</p>
                 <div className="space-y-1">
                   {section.items.map((item) => {
-                    const active = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(`${item.href}/`));
+                    const active = pathname === item.href ||
+                      (item.href !== '/admin/dashboard' && item.href !== '/admin/applications' && pathname.startsWith(`${item.href}/`)) ||
+                      (item.href === '/admin/applications' && (pathname === '/admin/applications' || pathname.startsWith('/admin/applications/')));
                     const Icon = item.icon;
                     return (
                       <a

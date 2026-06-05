@@ -6,6 +6,7 @@ import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { downloadReceiptPdf, formatBillingMonth, formatCurrency } from '@/lib/fee-management';
+import { loadLogoForPdf } from '@/lib/pdf-logo';
 
 export default function ReceiptsPage() {
   const router = useRouter();
@@ -70,22 +71,7 @@ export default function ReceiptsPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDownload = async (collection: any) => {
-    let logoDataUrl: string | undefined;
-    try {
-      const img = new Image();
-      img.src = '/assets/SIIF Logo.png';
-      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
-      if (img.naturalWidth) {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.drawImage(img, 0, 0);
-        logoDataUrl = canvas.toDataURL('image/png');
-      }
-    } catch {
-      // proceed without logo
-    }
+    const logoDataUrl = await loadLogoForPdf();
 
     downloadReceiptPdf({
       receiptNumber: collection.receipt_number,

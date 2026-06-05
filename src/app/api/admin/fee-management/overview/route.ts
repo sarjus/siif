@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
           .neq('status', 'void'),
         supabaseAdmin
           .from('company_deposits')
-          .select('status, amount_collected, balance_amount'),
+          .select('status, amount_collected, balance_amount, deposit_amount'),
         supabaseAdmin
           .from('fee_collections')
           .select('amount_collected, created_at')
@@ -46,7 +46,9 @@ export async function GET(request: NextRequest) {
       pendingFees: (invoices || []).filter(
         (item) => item.status === 'pending' || item.status === 'partially_paid'
       ).length,
-      pendingDeposits: (deposits || []).filter((item) => item.status === 'pending').length,
+      pendingDeposits: (deposits || []).filter(
+        (item) => item.status === 'pending' && Number(item.deposit_amount || 0) > 0
+      ).length,
       overdueFees: (invoices || []).filter((item) => item.status === 'overdue').length,
       recentPayments: (collections || []).length,
       upcomingDuePayments: (invoices || []).filter((item) => {

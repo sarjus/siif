@@ -50,7 +50,7 @@ export interface PaymentSlipDetails {
 }
 
 export const downloadPaymentSlipPdf = (details: PaymentSlipDetails) => {
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // ── Header ──────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { downloadReportPdf, exportCsv, formatBillingMonth, formatCurrency } from '@/lib/fee-management';
+import { loadLogoForPdf } from '@/lib/pdf-logo';
 
 type CompanyName = { business_name: string | null } | null;
 
@@ -133,17 +134,7 @@ export default function FeeReportsPage() {
   };
 
   const handleExportPdf = useCallback(async (reportTitle: string, headers: string[], rows: Array<Array<string | number>>) => {
-    let logoDataUrl: string | undefined;
-    try {
-      const res = await fetch('/assets/SIIF Logo.png');
-      const blob = await res.blob();
-      logoDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch { /* proceed without logo */ }
+    const logoDataUrl = await loadLogoForPdf();
     downloadReportPdf({ title: reportTitle, headers, rows, logoDataUrl });
   }, []);
 

@@ -11,6 +11,8 @@ type SaveConfigurationBody = {
   dueDay?: number;
   gracePeriodDays?: number;
   status?: string;
+  effectiveFrom?: string | null;  // Date from which revised fee applies
+  revisionNotes?: string | null;
 };
 
 const depositStatuses = new Set(['pending', 'collected', 'partially_refunded', 'refunded']);
@@ -94,6 +96,8 @@ export async function POST(request: NextRequest) {
     const depositStatus = String(body.depositStatus || 'pending');
     const status = String(body.status || 'active');
     const depositCollectionDate = body.depositCollectionDate || null;
+    const effectiveFrom = body.effectiveFrom || null;
+    const revisionNotes = body.revisionNotes || null;
 
     if (!companyId || !startDate) {
       return NextResponse.json(
@@ -151,6 +155,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get current fee before saving (for revision history)
+    const { data: existingSetting } = await supabaseAdmin
+      .from('incubation_fee_settings')
+      .select('monthly_fee')
+      .eq('company_id', companyId)
+      .maybeSingle();
+
     const { error: settingsError } = await supabaseAdmin
       .from('incubation_fee_settings')
       .upsert(
@@ -170,6 +181,38 @@ export async function POST(request: NextRequest) {
 
     if (settingsError) {
       return NextResponse.json({ error: settingsError.message }, { status: 400 });
+    }
+
+    // Record fee revision if the monthly fee changed and effectiveFrom is provided
+    const oldFee = Number(existingSetting?.monthly_fee || 0);
+    if (existingSetting && oldFee !== monthlyFee && effectiveFrom) {
+      await supabaseAdmin.from('fee_revision_history').insert({
+        company_id: companyId,
+        old_fee: oldFee,
+        new_fee: monthlyFee,
+        effective_from: effectiveFrom,
+        changed_by: (await supabaseAdmin.auth.getUser()).data.user?.email || 'Admin',
+        notes: revisionNotes,
+      });
+
+      // Update any pending/overdue invoices from the effective month onwards
+      // to reflect the new fee amount
+      const { data: futureInvoices } = await supabaseAdmin
+        .from('incubation_fee_invoices')
+        .select('id, billing_month, amount_paid, status')
+        .eq('company_id', companyId)
+        .gte('billing_month', effectiveFrom)
+        .in('status', ['pending', 'overdue', 'partially_paid']);
+
+      for (const inv of futureInvoices || []) {
+        if (Number(inv.amount_paid || 0) === 0) {
+          // Not yet paid — update the amount
+          await supabaseAdmin
+            .from('incubation_fee_invoices')
+            .update({ amount: monthlyFee })
+            .eq('id', inv.id);
+        }
+      }
     }
 
     const { data: existingDeposit, error: existingDepositError } = await supabaseAdmin

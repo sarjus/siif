@@ -26,6 +26,9 @@ const emptyForm = {
   dueDay: '5',
   gracePeriodDays: '0',
   status: 'active',
+  effectiveFrom: '',
+  revisionNotes: '',
+  originalMonthlyFee: '0',  // track original to detect change
 };
 
 export default function FeeConfigurationPage() {
@@ -39,6 +42,11 @@ export default function FeeConfigurationPage() {
   const [settings, setSettings] = useState<FeeSettingRecord[]>([]);
   const [deposits, setDeposits] = useState<DepositRecord[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [revisions, setRevisions] = useState<Array<{
+    id: string; old_fee: number; new_fee: number; effective_from: string;
+    changed_by: string | null; notes: string | null; created_at: string;
+    applications?: { business_name: string | null; email: string } | null;
+  }>>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -61,6 +69,15 @@ export default function FeeConfigurationPage() {
       setCompanies((payload.companies || []) as Company[]);
       setSettings((payload.settings || []) as FeeSettingRecord[]);
       setDeposits((payload.deposits || []) as DepositRecord[]);
+
+      // Load fee revisions
+      const revRes = await fetch('/api/admin/fee-management/fee-revisions', {
+        headers: await getAuthHeaders(),
+      });
+      if (revRes.ok) {
+        const revPayload = await revRes.json();
+        setRevisions(revPayload.revisions || []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load fee configuration data');
     } finally {
@@ -85,11 +102,11 @@ export default function FeeConfigurationPage() {
   const handleCompanyChange = (companyId: string) => {
     const setting = companySettings[companyId];
     const deposit = companyDeposits[companyId];
-
+    const fee = String(setting?.monthly_fee ?? 0);
     setForm({
       companyId,
       hasDeposit: Number(setting?.refundable_deposit ?? deposit?.deposit_amount ?? 0) > 0,
-      monthlyFee: String(setting?.monthly_fee ?? 0),
+      monthlyFee: fee,
       refundableDeposit: String(setting?.refundable_deposit ?? deposit?.deposit_amount ?? 0),
       depositCollectionDate: setting?.deposit_collection_date || deposit?.collection_date || '',
       depositStatus: setting?.deposit_status || deposit?.status || 'pending',
@@ -97,6 +114,9 @@ export default function FeeConfigurationPage() {
       dueDay: String(setting?.due_day ?? 5),
       gracePeriodDays: String(setting?.grace_period_days ?? 0),
       status: setting?.status || 'active',
+      effectiveFrom: '',
+      revisionNotes: '',
+      originalMonthlyFee: fee,
     });
   };
 
@@ -124,6 +144,8 @@ export default function FeeConfigurationPage() {
           dueDay: Number(form.dueDay || 5),
           gracePeriodDays: Number(form.gracePeriodDays || 0),
           status: form.status,
+          effectiveFrom: form.effectiveFrom || null,
+          revisionNotes: form.revisionNotes || null,
         }),
       });
 
@@ -195,6 +217,40 @@ export default function FeeConfigurationPage() {
                 />
               </div>
             ))}
+
+            {/* Fee revision section — shown when fee is changed for an existing company */}
+            {form.companyId && companySettings[form.companyId] &&
+              Number(form.monthlyFee) !== Number(form.originalMonthlyFee) && (
+              <div className="rounded-lg border border-[#F59E0B] bg-[#FFFBEB] p-4 space-y-3">
+                <p className="text-sm font-bold text-[#92400E]">
+                  ⚠ Fee changed from {formatCurrency(Number(form.originalMonthlyFee))} → {formatCurrency(Number(form.monthlyFee))}
+                </p>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-[#92400E]">
+                    Effective From <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.effectiveFrom}
+                    onChange={(e) => setForm((prev) => ({ ...prev, effectiveFrom: e.target.value }))}
+                    className="w-full rounded-lg border border-[#F59E0B] px-4 py-2 text-sm"
+                    min={new Date().toISOString().slice(0, 10)}
+                  />
+                  <p className="mt-1 text-xs text-[#92400E]">
+                    Pending invoices from this date onwards will be updated to the new fee.
+                  </p>
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-[#92400E]">Revision Notes (optional)</label>
+                  <input
+                    value={form.revisionNotes}
+                    onChange={(e) => setForm((prev) => ({ ...prev, revisionNotes: e.target.value }))}
+                    placeholder="e.g. Annual revision as per board decision"
+                    className="w-full rounded-lg border border-[#F59E0B] px-4 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Refundable deposit toggle */}
             <div className="flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-3">
@@ -269,7 +325,7 @@ export default function FeeConfigurationPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ backgroundColor: '#F5F6F7' }}>
-                  {['Company', 'Monthly Fee', 'Deposit', 'Start Date', 'Due Day', 'Plan Status', 'Deposit Status', ''].map((heading) => (
+                  {['Company', 'Monthly Fee', 'Deposit', 'Start Date', 'Due Day', 'Plan Status', ''].map((heading) => (
                     <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>
                   ))}
                 </tr>
@@ -278,6 +334,7 @@ export default function FeeConfigurationPage() {
                 {companies.map((company) => {
                   const setting = companySettings[company.id];
                   const deposit = companyDeposits[company.id];
+                  const depositAmount = Number(setting?.refundable_deposit || deposit?.deposit_amount || 0);
                   return (
                     <tr key={company.id} className="border-t border-gray-200">
                       <td className="px-4 py-4">
@@ -285,11 +342,12 @@ export default function FeeConfigurationPage() {
                         <div className="text-sm text-[#8A8A8A]">{company.email}</div>
                       </td>
                       <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(setting?.monthly_fee || 0)}</td>
-                      <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(setting?.refundable_deposit || deposit?.deposit_amount || 0)}</td>
+                      <td className="px-4 py-4 text-sm text-[#4A4A4A]">
+                        {depositAmount > 0 ? formatCurrency(depositAmount) : <span className="text-[#9CA3AF]">—</span>}
+                      </td>
                       <td className="px-4 py-4 text-sm text-[#4A4A4A]">{setting?.start_date || '-'}</td>
                       <td className="px-4 py-4 text-sm text-[#4A4A4A]">{setting?.due_day || '-'}</td>
                       <td className="px-4 py-4 text-sm text-[#4A4A4A]">{setting?.status || 'Not Configured'}</td>
-                      <td className="px-4 py-4 text-sm text-[#4A4A4A]">{setting?.deposit_status || deposit?.status || '-'}</td>
                       <td className="px-4 py-4">
                         <button
                           onClick={() => handleCompanyChange(company.id)}
@@ -307,6 +365,42 @@ export default function FeeConfigurationPage() {
           </div>
         </Card>
       </div>
+
+      {/* Fee Revision History */}
+      {revisions.length > 0 && (
+        <Card className="mt-6 border-0 shadow overflow-hidden">
+          <div className="border-b border-[#E3E7EE] p-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-[#172033]">Fee Revision History</h3>
+            <span className="rounded-full bg-[#F59E0B] px-3 py-1 text-xs font-bold text-white">{revisions.length} revision{revisions.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: '#F5F6F7' }}>
+                  {['Company', 'Old Fee', 'New Fee', 'Effective From', 'Changed By', 'Notes', 'Recorded At'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {revisions.map((rev) => (
+                  <tr key={rev.id} className="border-t border-gray-200">
+                    <td className="px-4 py-3 text-sm font-semibold text-[#4A4A4A]">
+                      {rev.applications?.business_name || rev.applications?.email || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#DC2626] line-through">{formatCurrency(rev.old_fee)}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-[#16A34A]">{formatCurrency(rev.new_fee)}</td>
+                    <td className="px-4 py-3 text-sm text-[#4A4A4A]">{rev.effective_from}</td>
+                    <td className="px-4 py-3 text-sm text-[#8A8A8A]">{rev.changed_by || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-[#8A8A8A]">{rev.notes || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-[#8A8A8A]">{new Date(rev.created_at).toLocaleDateString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </AdminShell>
   );
 }

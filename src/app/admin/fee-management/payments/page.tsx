@@ -17,6 +17,7 @@ import {
   PAYMENT_MODE_OPTIONS,
   PaymentMode,
 } from '@/lib/fee-management';
+import { loadLogoForPdf } from '@/lib/pdf-logo';
 type Company = { id: string; business_name: string | null; email: string; };
 
 type InvoiceWithCompany = InvoiceRecord & { applications?: { business_name: string | null; email: string } | null };
@@ -150,23 +151,10 @@ export default function RecordPaymentPage() {
 
   const handleDownloadReceipt = async () => {
     if (!latestReceipt) return;
-    // Cast to the expected type for downloadReceiptPdf
     type ReceiptDetails = Parameters<typeof downloadReceiptPdf>[0];
     const receipt = latestReceipt as unknown as ReceiptDetails;
-    try {
-      const img = new Image();
-      img.src = '/assets/SIIF Logo.png';
-      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth || 100;
-      canvas.height = img.naturalHeight || 100;
-      const ctx = canvas.getContext('2d');
-      if (ctx && img.naturalWidth) ctx.drawImage(img, 0, 0);
-      const logoDataUrl = img.naturalWidth ? canvas.toDataURL('image/png') : undefined;
-      downloadReceiptPdf({ ...receipt, logoDataUrl });
-    } catch {
-      downloadReceiptPdf(receipt);
-    }
+    const logoDataUrl = await loadLogoForPdf();
+    downloadReceiptPdf({ ...receipt, logoDataUrl });
   };
 
   const handleLogout = async () => {

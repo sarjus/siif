@@ -7,6 +7,7 @@ import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/fee-management';
 import { downloadPaymentSlipPdf, type PaymentSlipDetails } from '@/lib/staff-payment-pdf';
+import { loadLogoForPdf } from '@/lib/pdf-logo';
 
 type Staff = {
   id: string;
@@ -197,20 +198,7 @@ export default function StaffPaymentsPage() {
   };
 
   const handleDownloadSlip = async (slip: PaymentSlipDetails) => {
-    let logoDataUrl: string | undefined;
-    try {
-      const img = new Image();
-      img.src = '/assets/SIIF Logo.png';
-      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
-      if (img.naturalWidth) {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.drawImage(img, 0, 0);
-        logoDataUrl = canvas.toDataURL('image/png');
-      }
-    } catch { /* proceed without logo */ }
+    const logoDataUrl = await loadLogoForPdf();
     downloadPaymentSlipPdf({ ...slip, logoDataUrl });
   };
 

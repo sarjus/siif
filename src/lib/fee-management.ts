@@ -217,7 +217,7 @@ export const downloadReceiptPdf = (details: {
   receivedBy?: string | null;
   logoDataUrl?: string;
 }) => {
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // --- Header block ---
@@ -311,7 +311,7 @@ export const downloadReportPdf = ({
   rows: Array<Array<string | number>>;
   logoDataUrl?: string;
 }) => {
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // --- Header block ---

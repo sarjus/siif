@@ -5,7 +5,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Create Supabase client for client-side operations
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// auth.debug: false suppresses internal SDK console errors (e.g. "Invalid Refresh Token")
+// that are already handled gracefully in getSafeSession().
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    debug: false,
+  },
+});
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
