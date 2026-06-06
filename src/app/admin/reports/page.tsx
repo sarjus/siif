@@ -118,22 +118,21 @@ export default function ReportsHubPage() {
     <AdminShell title="Reports" subtitle="Financial and operational reports with export options" userEmail={userEmail} onLogout={handleLogout}>
       {/* Summary strip */}
       <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
+        {([
           ['Total Income', formatCurrency(stats.totalIncome), '#16A34A', ArrowDownToLine],
           ['Outstanding', formatCurrency(stats.totalOutstanding), '#DC2626', TrendingDown],
           ['Staff Payments', formatCurrency(stats.totalStaffPaid), '#7C3AED', ArrowUpFromLine],
           ['Net Position', formatCurrency(Math.abs(stats.netBalance)), stats.netBalance >= 0 ? '#16A34A' : '#DC2626', CircleDollarSign],
-        ].map(([label, value, color, Icon]) => (
+        ] as [string, string, string, React.ElementType][]).map(([label, value, color, Icon]) => (
           <Card key={String(label)} className="border-0 shadow p-5 flex items-center gap-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5F6F7]">
-              {/* @ts-expect-error dynamic icon */}
-              <Icon className="size-5" style={{ color: String(color) }} />
+              <Icon className="size-5" style={{ color }} />
             </div>
             <div>
               <p className="text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
-              <p className="text-xl font-bold" style={{ color: String(color) }}>{value}</p>
-              {String(label) === 'Net Position' && (
-                <p className="text-[10px] font-semibold" style={{ color: String(color) }}>
+              <p className="text-xl font-bold" style={{ color }}>{value}</p>
+              {label === 'Net Position' && (
+                <p className="text-[10px] font-semibold" style={{ color }}>
                   {stats.netBalance >= 0 ? 'Surplus' : 'Deficit'}
                 </p>
               )}
