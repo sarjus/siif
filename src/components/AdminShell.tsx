@@ -64,7 +64,7 @@ const navSections = [
     title: 'Finance & Reports',
     items: [
       { label: 'Overview', href: '/admin/fee-management', description: 'Fee collection dashboard', icon: Gauge },
-      { label: 'Reports', href: '/admin/fee-management/reports', description: 'Analytics and export', icon: FileBarChart },
+      { label: 'Reports', href: '/admin/reports', description: 'Financial reports hub', icon: FileBarChart },
       { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — debit & credit', icon: BookOpen },
     ],
   },

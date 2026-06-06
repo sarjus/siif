@@ -67,7 +67,7 @@ const sections: Section[] = [
     bg: '#ECFDF5',
     items: [
       { label: 'Overview', description: 'Fee collection dashboard and summaries', href: '/admin/fee-management', icon: Gauge },
-      { label: 'Reports', description: 'Analytics, exports and financial reports', href: '/admin/fee-management/reports', icon: FileBarChart },
+      { label: 'Reports', description: 'Financial reports hub — 6 reports', href: '/admin/reports', icon: FileBarChart },
       { label: 'Ledger', description: 'General ledger — track debit & credit', href: '/admin/ledger', icon: BookOpen },
     ],
   },
