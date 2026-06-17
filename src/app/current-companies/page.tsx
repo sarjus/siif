@@ -77,6 +77,7 @@ const companies: CompanyWithWebsite[] = [
     ],
     location: 'Kerala',
     focus: 'Custom Software & Digital Innovation',
+    website: 'https://vedikitsolutions.com/',
   },
   {
     id: 'geocon-india',
