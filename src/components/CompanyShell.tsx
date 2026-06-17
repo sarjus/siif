@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { CreditCard, LayoutDashboard, LogOut, CalendarDays } from 'lucide-react';
+import { CreditCard, LayoutDashboard, LogOut, CalendarDays, Users } from 'lucide-react';
 
 type CompanyShellProps = {
   title: string;
@@ -18,6 +18,7 @@ const navItems = [
   { label: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard },
   { label: 'Payments', href: '/company/payments', icon: CreditCard },
   { label: 'Conference Room', href: '/company/conference', icon: CalendarDays },
+  { label: 'Team Directory', href: '/company/incubatees', icon: Users },
 ];
 
 export default function CompanyShell({

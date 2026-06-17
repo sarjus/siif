@@ -7,6 +7,7 @@ import AdminShell from '@/components/AdminShell';
 import {
   Bell,
   Banknote,
+  BadgeCheck,
   BookOpen,
   CalendarDays,
   ClipboardList,
@@ -37,6 +38,7 @@ const sections: Section[] = [
     items: [
       { label: 'Applications', description: 'View and manage incubation applications', href: '/admin/applications', icon: ClipboardList },
       { label: 'Reviewers', description: 'Manage reviewer accounts and access', href: '/admin/reviewers', icon: Users },
+      { label: 'Incubatee Directory', description: 'Verify and manage incubatee profiles', href: '/admin/incubatees', icon: BadgeCheck },
     ],
   },
   {

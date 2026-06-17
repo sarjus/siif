@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import CompanyShell from '@/components/CompanyShell';
-import { Card } from '@/components/ui/card';
 import ConferenceCalendar, { type Booking } from '@/components/ConferenceCalendar';
 
 export default function CompanyConferencePage() {
@@ -140,14 +139,14 @@ export default function CompanyConferencePage() {
       {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
       {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
 
-      <Card className="border-0 shadow p-6">
+      <div className="rounded-xl border border-[#dadce0] overflow-hidden bg-white" style={{ height: 'calc(100vh - 220px)', minHeight: '600px' }}>
         <ConferenceCalendar
           bookings={bookings}
           canRequest
           onSlotClick={handleSlotClick}
           onBookingClick={setSelected}
         />
-      </Card>
+      </div>
 
       {/* Request form modal */}
       {showForm && (

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
-import { Card } from '@/components/ui/card';
 import ConferenceCalendar, { type Booking } from '@/components/ConferenceCalendar';
 
 export default function AdminConferencePage() {
@@ -97,9 +96,9 @@ export default function AdminConferencePage() {
 
       {/* Calendar tab */}
       {activeTab === 'calendar' && (
-        <Card className="border-0 shadow p-6">
+        <div className="rounded-xl border border-[#dadce0] overflow-hidden bg-white" style={{ height: 'calc(100vh - 240px)', minHeight: '600px' }}>
           <ConferenceCalendar bookings={bookings} onBookingClick={setSelected} />
-        </Card>
+        </div>
       )}
 
       {/* Requests tab */}

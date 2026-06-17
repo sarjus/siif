@@ -65,3 +65,22 @@ export const nextPaymentNumber = async (
   if (error) throw new Error(`Failed to generate payment number: ${error.message}`);
   return `SIIF-PAY-${yr}-${padSeq(data as number)}`;
 };
+
+/**
+ * Generate the next incubatee ID: 26SIIF001 format
+ * YY (2-digit year) + SIIF + 3-digit sequence
+ */
+export const nextIncubateeId = async (
+  supabaseAdmin: SupabaseClient,
+  year?: number
+): Promise<string> => {
+  const yr = year ?? new Date().getFullYear();
+  const { data, error } = await supabaseAdmin.rpc('next_siif_number', {
+    p_series: 'EMP',
+    p_year: yr,
+  });
+  if (error) throw new Error(`Failed to generate incubatee ID: ${error.message}`);
+  const yy = String(yr).slice(-2); // last 2 digits: 2026 → "26"
+  const seq = String(data as number).padStart(3, '0');
+  return `${yy}SIIF${seq}`;
+};

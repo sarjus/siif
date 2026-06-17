@@ -21,6 +21,7 @@ import {
   Banknote,
   CalendarDays,
   BookOpen,
+  BadgeCheck,
 } from 'lucide-react';
 
 type AdminShellProps = {
@@ -40,6 +41,7 @@ const navSections = [
       { label: 'Dashboard', href: '/admin/dashboard', description: 'System overview', icon: LayoutDashboard },
       { label: 'Applications', href: '/admin/applications', description: 'Track & manage submissions', icon: ClipboardList },
       { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts', icon: Users },
+      { label: 'Incubatee Directory', href: '/admin/incubatees', description: 'Verify incubatee profiles', icon: BadgeCheck },
     ],
   },
   {
