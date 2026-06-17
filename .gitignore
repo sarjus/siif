@@ -48,3 +48,4 @@ billing_month_migration_may_to_june_2026.sql
 fee_revision_schema.sql
 .gitignore
 ledger_schema.sql
+rename_vedic_to_vedik.sql

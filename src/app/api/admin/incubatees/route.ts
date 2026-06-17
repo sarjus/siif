@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
 import { nextIncubateeId } from '@/lib/sequential-numbers';
+import { signPhotoUrl } from '@/lib/photo-token';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (!user) return response!;
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status'); // pending | approved | rejected | all
+    const status = searchParams.get('status');
 
     const supabase = createServiceRoleClient();
     let query = supabase
@@ -24,7 +25,20 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ incubatees: data || [] });
+
+    const incubatees = data || [];
+
+    // Attach a server-signed proxy URL for each photo.
+    // Supabase signed URLs are NOT sent to the browser — only HMAC-protected
+    // proxy URLs that our own route validates before streaming the image.
+    const result = incubatees.map((i) => ({
+      ...i,
+      signed_photo_url: i.photo_url
+        ? signPhotoUrl(i.photo_url, '/api/admin/incubatees/photo')
+        : null,
+    }));
+
+    return NextResponse.json({ incubatees: result });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
   }

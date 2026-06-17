@@ -61,12 +61,12 @@ const companies: CompanyWithWebsite[] = [
     website: 'https://kochi.digital/',
   },
   {
-    id: 'vedic-solutions',
-    name: 'Vedic Solutions',
+    id: 'vedik-solutions',
+    name: 'Vedik Solutions',
     logo: '/assets/Startups/Vedik logo.jpeg',
     tagline: 'Bridging Ideas and Digital Transformation',
     description:
-      'Vedic Solutions is an emerging IT startup dedicated to creating innovative, technology-driven software solutions for businesses, educational institutions, and individuals. Specializing in custom software development, web and mobile applications, cloud-based solutions, and business automation, Vedic Solutions helps organizations streamline operations, enhance productivity, and accelerate growth through impactful digital transformation.',
+      'Vedik Solutions is an emerging IT startup dedicated to creating innovative, technology-driven software solutions for businesses, educational institutions, and individuals. Specializing in custom software development, web and mobile applications, cloud-based solutions, and business automation, Vedik Solutions helps organizations streamline operations, enhance productivity, and accelerate growth through impactful digital transformation.',
     domains: [
       'Custom Software Development',
       'Web Development',

@@ -1,17 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
+import { Camera } from 'lucide-react';
 
 type Incubatee = {
   id: string; company_id: string; incubatee_id: string | null;
   full_name: string; designation: string; email: string | null;
   mobile: string | null; gender: string | null; date_of_birth: string | null;
   address: string | null; id_type: string | null; id_number: string | null;
-  photo_url: string | null; status: 'pending' | 'approved' | 'rejected';
+  photo_url: string | null; signed_photo_url: string | null;
+  status: 'pending' | 'approved' | 'rejected';
   rejection_reason: string | null; reviewed_by: string | null;
   reviewed_at: string | null; created_at: string;
   applications?: { business_name: string | null; email: string } | null;
@@ -31,6 +33,9 @@ export default function AdminIncubatyeesPage() {
   const [selected, setSelected] = useState<Incubatee | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const session = await getSafeSession();
@@ -58,6 +63,42 @@ export default function AdminIncubatyeesPage() {
       return matchStatus && matchSearch;
     });
   }, [incubatees, statusFilter, search]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selected) return;
+    if (file.size > 2 * 1024 * 1024) { setError('Photo must be under 2MB.'); return; }
+
+    setUploading(true); setError(null);
+    try {
+      const preview = URL.createObjectURL(file);
+      setPhotoPreview(preview);
+
+      const fd = new FormData();
+      fd.append('photo', file);
+      fd.append('incubateeId', selected.id);
+
+      const res = await fetch('/api/admin/incubatees/upload-photo', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      setPhotoPreview(data.signedUrl || preview);
+      // Update selected to reflect new photo_url and signed_photo_url
+      setSelected(prev => prev ? { ...prev, photo_url: data.photoUrl, signed_photo_url: data.signedUrl ?? null } : prev);
+      setNotice('Photo uploaded successfully.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+      setPhotoPreview(null);
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     if (action === 'reject' && !rejectionReason.trim()) {
@@ -140,11 +181,11 @@ export default function AdminIncubatyeesPage() {
           {filtered.map(item => (
             <Card key={item.id}
               className="border-0 shadow p-5 flex flex-col items-center text-center gap-3 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => { setSelected(item); setRejectionReason(''); setError(null); }}>
+              onClick={() => { setSelected(item); setRejectionReason(''); setError(null); setPhotoPreview(null); }}>
               {/* Photo */}
               <div className="h-20 w-20 rounded-full overflow-hidden bg-[#F5F6F7] border-2 border-[#E3E7EE] flex items-center justify-center">
-                {item.photo_url ? (
-                  <img src={`/api/company/incubatees/photo?path=${encodeURIComponent(item.photo_url)}`}
+                {item.signed_photo_url ? (
+                  <img src={item.signed_photo_url}
                     alt={item.full_name} className="h-full w-full object-cover"
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
@@ -174,20 +215,40 @@ export default function AdminIncubatyeesPage() {
           <Card className="w-full max-w-lg border-0 shadow-2xl p-6 bg-white max-h-[92vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Incubatee Details</h3>
-              <button onClick={() => setSelected(null)} className="text-[#8A8A8A] text-xl">✕</button>
+              <button onClick={() => { setSelected(null); setPhotoPreview(null); }} className="text-[#8A8A8A] text-xl">✕</button>
             </div>
             {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
 
             {/* Photo + name */}
             <div className="flex flex-col items-center gap-3 mb-5">
-              <div className="h-28 w-28 rounded-full overflow-hidden bg-[#F5F6F7] border-2 border-[#E3E7EE] flex items-center justify-center">
-                {selected.photo_url ? (
-                  <img src={`/api/company/incubatees/photo?path=${encodeURIComponent(selected.photo_url)}`}
-                    alt={selected.full_name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold text-[#9CA3AF]">{selected.full_name.charAt(0).toUpperCase()}</span>
-                )}
+              <div className="relative">
+                <div className="h-28 w-28 rounded-full overflow-hidden bg-[#F5F6F7] border-2 border-[#E3E7EE] flex items-center justify-center">
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                  ) : selected.signed_photo_url ? (
+                    <img src={selected.signed_photo_url}
+                      alt={selected.full_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-bold text-[#9CA3AF]">{selected.full_name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                {/* Upload button overlay */}
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  title="Upload photo"
+                  className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#FF3B3B] text-white shadow-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {uploading ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Camera className="size-4" />
+                  )}
+                </button>
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  className="hidden" onChange={handlePhotoUpload} />
               </div>
+              <p className="text-[11px] text-[#8A8A8A]">Click camera icon to upload photo (max 2MB)</p>
               <div className="text-center">
                 <p className="text-lg font-bold text-[#172033]">{selected.full_name}</p>
                 <p className="text-sm text-[#667085]">{selected.designation}</p>
@@ -252,3 +313,4 @@ export default function AdminIncubatyeesPage() {
     </AdminShell>
   );
 }
+
