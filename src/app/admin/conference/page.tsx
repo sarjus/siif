@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
+import { Card } from '@/components/ui/card';
 import ConferenceCalendar, { type Booking } from '@/components/ConferenceCalendar';
 
 export default function AdminConferencePage() {
