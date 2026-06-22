@@ -49,3 +49,4 @@ fee_revision_schema.sql
 .gitignore
 ledger_schema.sql
 rename_vedic_to_vedik.sql
+attendance_schema.sql

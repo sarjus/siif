@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileBarChart,
   FileText,
+  Fingerprint,
   Gauge,
   Landmark,
   LayoutDashboard,
@@ -75,6 +76,7 @@ const navSections = [
     items: [
       { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: Banknote },
       { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
+      { label: 'Attendance', href: '/admin/attendance', description: 'Biometric attendance — eSSL F22 Pro', icon: Fingerprint },
     ],
   },
 ];
