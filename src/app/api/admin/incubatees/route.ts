@@ -1,6 +1,7 @@
 /**
- * GET  /api/admin/incubatees            — list all incubatees
- * POST /api/admin/incubatees            — approve or reject
+ * GET   /api/admin/incubatees            — list all incubatees
+ * POST  /api/admin/incubatees            — approve or reject
+ * PATCH /api/admin/incubatees            — edit incubatee_id of an approved entry
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
@@ -99,5 +100,80 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, action: 'approved', incubatee: data });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { user, response } = await requireAdmin(request);
+    if (!user) return response!;
+
+    const body = await request.json() as {
+      incubateeId?: string;   // row UUID
+      newIncubateeId?: string; // the new display ID, e.g. 26SIIF005
+    };
+
+    const { incubateeId, newIncubateeId } = body;
+    if (!incubateeId || !newIncubateeId?.trim()) {
+      return NextResponse.json(
+        { error: 'incubateeId and newIncubateeId are required.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate format: 2-digit year + SIIF + 3-digit seq (e.g. 26SIIF001)
+    if (!/^\d{2}SIIF\d{3}$/.test(newIncubateeId.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid format. Expected YYSIIFnnn (e.g. 26SIIF001).' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    // Only approved entries can have their ID edited
+    const { data: existing } = await supabase
+      .from('incubatees')
+      .select('id, status, incubatee_id')
+      .eq('id', incubateeId)
+      .maybeSingle();
+
+    if (!existing) return NextResponse.json({ error: 'Incubatee not found.' }, { status: 404 });
+    if (existing.status !== 'approved') {
+      return NextResponse.json(
+        { error: 'Only approved entries can have their ID edited.' },
+        { status: 400 }
+      );
+    }
+
+    // Check uniqueness — make sure the new ID isn't already in use by another row
+    const { data: conflict } = await supabase
+      .from('incubatees')
+      .select('id')
+      .eq('incubatee_id', newIncubateeId.trim())
+      .neq('id', incubateeId)
+      .maybeSingle();
+
+    if (conflict) {
+      return NextResponse.json(
+        { error: `ID "${newIncubateeId.trim()}" is already assigned to another incubatee.` },
+        { status: 409 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('incubatees')
+      .update({ incubatee_id: newIncubateeId.trim() })
+      .eq('id', incubateeId)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true, incubatee: data });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed' },
+      { status: 500 }
+    );
   }
 }

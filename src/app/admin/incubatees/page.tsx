@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
-import { Camera } from 'lucide-react';
+import { Camera, Pencil, Check, X } from 'lucide-react';
 
 type Incubatee = {
   id: string; company_id: string; incubatee_id: string | null;
@@ -36,6 +36,10 @@ export default function AdminIncubatyeesPage() {
   const [uploading, setUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Edit incubatee ID state
+  const [editingId, setEditingId] = useState(false);
+  const [editIdValue, setEditIdValue] = useState('');
+  const [savingId, setSavingId] = useState(false);
 
   const load = useCallback(async () => {
     const session = await getSafeSession();
@@ -127,6 +131,33 @@ export default function AdminIncubatyeesPage() {
     }
   };
 
+  const handleSaveId = async () => {
+    if (!selected) return;
+    const trimmed = editIdValue.trim().toUpperCase();
+    if (!trimmed) { setError('Incubatee ID cannot be empty.'); return; }
+    if (!/^\d{2}SIIF\d{3}$/.test(trimmed)) {
+      setError('Invalid format. Use YYSIIFnnn (e.g. 26SIIF001).'); return;
+    }
+    setSavingId(true); setError(null);
+    try {
+      const res = await fetch('/api/admin/incubatees', {
+        method: 'PATCH',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incubateeId: selected.id, newIncubateeId: trimmed }),
+      });
+      const p = await res.json();
+      if (!res.ok) throw new Error(p.error || 'Failed');
+      setNotice(`Incubatee ID updated to ${trimmed}.`);
+      setSelected(prev => prev ? { ...prev, incubatee_id: trimmed } : prev);
+      setEditingId(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed');
+    } finally {
+      setSavingId(false);
+    }
+  };
+
   const pendingCount = incubatees.filter(i => i.status === 'pending').length;
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -215,7 +246,7 @@ export default function AdminIncubatyeesPage() {
           <Card className="w-full max-w-lg border-0 shadow-2xl p-6 bg-white max-h-[92vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Incubatee Details</h3>
-              <button onClick={() => { setSelected(null); setPhotoPreview(null); }} className="text-[#8A8A8A] text-xl">✕</button>
+              <button onClick={() => { setSelected(null); setPhotoPreview(null); setEditingId(false); setEditIdValue(''); }} className="text-[#8A8A8A] text-xl">✕</button>
             </div>
             {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
 
@@ -254,9 +285,51 @@ export default function AdminIncubatyeesPage() {
                 <p className="text-sm text-[#667085]">{selected.designation}</p>
                 <p className="text-xs text-[#8A8A8A]">{selected.applications?.business_name || '-'}</p>
                 {selected.incubatee_id && (
-                  <span className="mt-1 inline-block rounded bg-[#EFF6FF] px-2 py-0.5 text-sm font-mono font-bold text-[#1a73e8]">
-                    {selected.incubatee_id}
-                  </span>
+                  <div className="mt-1 flex items-center justify-center gap-1.5">
+                    {editingId ? (
+                      <>
+                        <input
+                          value={editIdValue}
+                          onChange={e => setEditIdValue(e.target.value.toUpperCase())}
+                          maxLength={9}
+                          placeholder="26SIIF001"
+                          className="w-28 rounded border border-[#1a73e8] bg-[#EFF6FF] px-2 py-0.5 text-center text-sm font-mono font-bold text-[#1a73e8] outline-none focus:ring-2 focus:ring-[#1a73e8]"
+                          onKeyDown={e => { if (e.key === 'Enter') handleSaveId(); if (e.key === 'Escape') { setEditingId(false); setError(null); } }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleSaveId}
+                          disabled={savingId}
+                          title="Save"
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-[#16A34A] text-white hover:bg-[#15803D] disabled:opacity-50"
+                        >
+                          {savingId ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Check className="size-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => { setEditingId(false); setError(null); }}
+                          title="Cancel"
+                          className="flex h-6 w-6 items-center justify-center rounded-full bg-[#8A8A8A] text-white hover:bg-[#6B6B6B]"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="rounded bg-[#EFF6FF] px-2 py-0.5 text-sm font-mono font-bold text-[#1a73e8]">
+                          {selected.incubatee_id}
+                        </span>
+                        {selected.status === 'approved' && (
+                          <button
+                            onClick={() => { setEditingId(true); setEditIdValue(selected.incubatee_id ?? ''); setError(null); }}
+                            title="Edit Incubatee ID"
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F3F4F6] text-[#667085] hover:bg-[#E5E7EB] hover:text-[#172033] transition-colors"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
               <span className="rounded-full px-3 py-1 text-xs font-semibold text-white capitalize"
