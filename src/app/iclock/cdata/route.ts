@@ -91,6 +91,12 @@ export async function GET(request: NextRequest) {
   const sn    = searchParams.get('SN') || '';
   const stamp = searchParams.get('Stamp') || ''; // device's current Unix timestamp
 
+  console.log('ICLOCK REQUEST', {
+    sn: request.nextUrl.searchParams.get('SN'),
+    ip: request.headers.get('x-forwarded-for') || 'unknown',
+    time: new Date().toISOString(),
+  });
+
   // Optional secret check
   if (ADMS_SECRET) {
     const provided = searchParams.get('secret') || request.headers.get('x-adms-secret') || '';
