@@ -86,6 +86,7 @@ export default function AttendancePage() {
   const [mapDeviceSn, setMapDeviceSn] = useState('');
   const [mapPin, setMapPin] = useState('');
   const [mapIncubateeId, setMapIncubateeId] = useState('');
+  const [savingMap, setSavingMap] = useState(false);
   const [refreshingDevices, setRefreshingDevices] = useState(false);
 
   // ─── Data loaders ─────────────────────────────────────────────────────────
