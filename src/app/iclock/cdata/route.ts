@@ -28,10 +28,12 @@ import { createServiceRoleClient } from '@/lib/server-auth';
 // Optional shared secret — set ADMS_SECRET in .env.local and on the device
 const ADMS_SECRET = process.env.ADMS_SECRET || '';
 
-/** Format current time as YYYY-MM-DD HH:MM:SS (UTC) for the device */
+/** Format current time as YYYY-MM-DD HH:MM:SS in IST for the device */
 function serverTimeString(): string {
+  // Device expects local time (IST = UTC+5:30)
   const now = new Date();
-  return now.toISOString().replace('T', ' ').substring(0, 19);
+  const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  return ist.toISOString().replace('T', ' ').substring(0, 19);
 }
 
 /** Parse a single ATTLOG line into structured fields */
@@ -50,7 +52,7 @@ function parseAttlogLine(line: string): {
   const [pin, date, time, verifyStr, punchStr, ...rest] = parts;
   if (!pin || !date || !time) return null;
 
-  const punchTime = new Date(`${date}T${time}Z`); // treat device time as UTC
+  const punchTime = new Date(`${date}T${time}+05:30`); // device is in IST (UTC+5:30)
   if (isNaN(punchTime.getTime())) return null;
 
   return {
@@ -90,16 +92,15 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   // Standard iClock handshake response
-  // The device reads GET_STAMP to know which records to push
-  const body = [
-    `GET STAMP`,
-    `Date:${serverTimeString()}`,
-    '',
-  ].join('\r\n');
+  // Format must be exactly: "GET STAMP\r\nDate:YYYY-MM-DD HH:MM:SS\r\n\r\n"
+  const body = `GET STAMP\r\nDate:${serverTimeString()}\r\n\r\n`;
 
   return new NextResponse(body, {
     status: 200,
-    headers: { 'Content-Type': 'text/plain' },
+    headers: {
+      'Content-Type': 'text/plain',
+      'Connection': 'close',
+    },
   });
 }
 
@@ -211,6 +212,6 @@ export async function POST(request: NextRequest) {
   // Standard iClock acknowledgement
   return new NextResponse(`OK: ${saved}`, {
     status: 200,
-    headers: { 'Content-Type': 'text/plain' },
+    headers: { 'Content-Type': 'text/plain', 'Connection': 'close' },
   });
 }
