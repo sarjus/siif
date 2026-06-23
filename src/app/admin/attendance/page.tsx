@@ -135,6 +135,12 @@ export default function AttendancePage() {
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-refresh devices every 30 seconds to update online/offline status
+  useEffect(() => {
+    const timer = setInterval(() => { loadDevices(); }, 30_000);
+    return () => clearInterval(timer);
+  }, [loadDevices]);
+
   // ─── Device actions ───────────────────────────────────────────────────────
   const handleAddDevice = async () => {
     if (!newDeviceSn.trim() || !newDeviceName.trim()) {
@@ -372,7 +378,13 @@ export default function AttendancePage() {
         <div className="space-y-4">
           {/* Register new device */}
           <Card className="border-0 shadow p-5">
-            <h3 className="mb-3 font-bold text-[#172033]">Register New Device</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-[#172033]">Register New Device</h3>
+              <button onClick={loadDevices}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-[#667085] hover:bg-gray-50">
+                <RefreshCw className="size-3.5" /> Refresh
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold text-[#4A4A4A]">Serial Number *</label>
