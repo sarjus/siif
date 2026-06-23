@@ -28,12 +28,30 @@ import { createServiceRoleClient } from '@/lib/server-auth';
 // Optional shared secret — set ADMS_SECRET in .env.local and on the device
 const ADMS_SECRET = process.env.ADMS_SECRET || '';
 
-/** Format current time as YYYY-MM-DD HH:MM:SS in IST for the device */
-function serverTimeString(): string {
-  // Device expects local time (IST = UTC+5:30)
-  const now = new Date();
-  const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-  return ist.toISOString().replace('T', ' ').substring(0, 19);
+// Device timezone — IST is UTC+5:30
+// This MUST match the timezone configured on the F22 Pro device.
+// If the device is set to a different timezone, update this offset.
+const DEVICE_TZ_OFFSET_MINUTES = 330; // IST = UTC + 330 min
+
+/**
+ * Return current time formatted as "YYYY-MM-DD HH:MM:SS" in the device's
+ * local timezone. The iClock protocol requires the server to echo back
+ * local time — NOT UTC — so the device can sync its RTC clock.
+ *
+ * ZKTeco/eSSL devices reject the handshake if the returned time differs
+ * from the device's own clock by more than ~30 minutes.
+ */
+function deviceLocalTimeString(): string {
+  const nowUtcMs = Date.now();
+  const localMs = nowUtcMs + DEVICE_TZ_OFFSET_MINUTES * 60 * 1000;
+  const d = new Date(localMs);
+  const yyyy = d.getUTCFullYear();
+  const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getUTCDate()).padStart(2, '0');
+  const hh   = String(d.getUTCHours()).padStart(2, '0');
+  const min  = String(d.getUTCMinutes()).padStart(2, '0');
+  const ss   = String(d.getUTCSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
 
 /** Parse a single ATTLOG line into structured fields */
@@ -52,7 +70,9 @@ function parseAttlogLine(line: string): {
   const [pin, date, time, verifyStr, punchStr, ...rest] = parts;
   if (!pin || !date || !time) return null;
 
-  const punchTime = new Date(`${date}T${time}+05:30`); // device is in IST (UTC+5:30)
+  // Device timestamps are in local time (IST). Convert to UTC for storage.
+  const localMs = new Date(`${date}T${time}`).getTime();
+  const punchTime = new Date(localMs - DEVICE_TZ_OFFSET_MINUTES * 60 * 1000);
   if (isNaN(punchTime.getTime())) return null;
 
   return {
@@ -68,7 +88,8 @@ function parseAttlogLine(line: string): {
 // ─── GET: handshake & heartbeat ───────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const sn = searchParams.get('SN') || '';
+  const sn    = searchParams.get('SN') || '';
+  const stamp = searchParams.get('Stamp') || ''; // device's current Unix timestamp
 
   // Optional secret check
   if (ADMS_SECRET) {
@@ -82,18 +103,47 @@ export async function GET(request: NextRequest) {
     return new NextResponse('ERROR: Missing SN', { status: 400 });
   }
 
+  // Detect clock drift — warn in logs if device time is off by more than 5 minutes
+  if (stamp) {
+    const deviceTs = parseInt(stamp, 10);
+    if (!isNaN(deviceTs)) {
+      const driftSeconds = Math.abs(Math.floor(Date.now() / 1000) - deviceTs);
+      if (driftSeconds > 300) {
+        console.warn(
+          `[ADMS] Clock drift detected for ${sn}: ${driftSeconds}s. ` +
+          `Server will correct device time via Date: response.`
+        );
+      }
+    }
+  }
+
   const supabase = createServiceRoleClient();
 
-  // Upsert device — auto-register on first contact
-  await supabase
+  // Update last_seen on every heartbeat.
+  // First try to insert (new device), then update if already exists.
+  const { data: existingDevice } = await supabase
     .from('attendance_devices')
-    .upsert({ serial_no: sn, last_seen: new Date().toISOString() }, { onConflict: 'serial_no' })
-    .select()
+    .select('id')
+    .eq('serial_no', sn)
     .maybeSingle();
 
-  // Standard iClock handshake response
-  // Format must be exactly: "GET STAMP\r\nDate:YYYY-MM-DD HH:MM:SS\r\n\r\n"
-  const body = `GET STAMP\r\nDate:${serverTimeString()}\r\n\r\n`;
+  if (existingDevice) {
+    // Device already registered — just update last_seen
+    await supabase
+      .from('attendance_devices')
+      .update({ last_seen: new Date().toISOString() })
+      .eq('serial_no', sn);
+  } else {
+    // First contact — auto-register the device
+    await supabase
+      .from('attendance_devices')
+      .insert({ serial_no: sn, last_seen: new Date().toISOString(), name: sn });
+  }
+
+  // Standard iClock handshake response.
+  // The Date field MUST be in the device's local time — the device uses this
+  // to sync its RTC. Using UTC here would cause a 5:30h drift and rejected syncs.
+  const body = `GET STAMP\r\nDate:${deviceLocalTimeString()}\r\n\r\n`;
 
   return new NextResponse(body, {
     status: 200,
@@ -122,12 +172,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceRoleClient();
 
-  // Update device heartbeat
+  // Update last_seen on every push
   await supabase
     .from('attendance_devices')
-    .upsert({ serial_no: sn, last_seen: new Date().toISOString() }, { onConflict: 'serial_no' })
-    .select()
-    .maybeSingle();
+    .update({ last_seen: new Date().toISOString() })
+    .eq('serial_no', sn);
 
   // We only process attendance logs
   if (table !== 'ATTLOG') {
