@@ -1,0 +1,21 @@
+services:
+  siif:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Pass public env vars at build time so Next.js can inline them
+      args:
+        NEXT_PUBLIC_SUPABASE_URL:    ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL:         ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: ${NEXT_PUBLIC_RAZORPAY_KEY_ID}
+    image: siif-app:latest
+    container_name: siif
+    restart: unless-stopped
+    ports:
+      - "80:3000"      # device hits port 80 → container port 3000
+    env_file:
+      - .env.local     # all secrets injected at runtime
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
