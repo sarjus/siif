@@ -86,7 +86,7 @@ export default function AttendancePage() {
   const [mapDeviceSn, setMapDeviceSn] = useState('');
   const [mapPin, setMapPin] = useState('');
   const [mapIncubateeId, setMapIncubateeId] = useState('');
-  const [savingMap, setSavingMap] = useState(false);
+  const [refreshingDevices, setRefreshingDevices] = useState(false);
 
   // ─── Data loaders ─────────────────────────────────────────────────────────
   const loadLogs = useCallback(async (pg = 1) => {
@@ -106,10 +106,12 @@ export default function AttendancePage() {
   }, [filterFrom, filterTo, filterPin, filterDevice, filterPunchType]);
 
   const loadDevices = useCallback(async () => {
+    setRefreshingDevices(true);
     const res = await fetch('/api/admin/attendance/devices', { headers: await getAuthHeaders() });
     const p = await res.json();
     if (res.ok) setDevices(p.devices);
     else setError(p.error);
+    setRefreshingDevices(false);
   }, []);
 
   const loadMappings = useCallback(async () => {
@@ -380,9 +382,9 @@ export default function AttendancePage() {
           <Card className="border-0 shadow p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-[#172033]">Register New Device</h3>
-              <button onClick={loadDevices}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-[#667085] hover:bg-gray-50">
-                <RefreshCw className="size-3.5" /> Refresh
+              <button onClick={loadDevices} disabled={refreshingDevices}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-[#667085] hover:bg-gray-50 disabled:opacity-50">
+                <RefreshCw className={`size-3.5 ${refreshingDevices ? 'animate-spin' : ''}`} /> Refresh
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -418,7 +420,7 @@ export default function AttendancePage() {
                 No devices registered yet. Add your F22 Pro serial number above.
               </Card>
             ) : devices.map(d => {
-              const online = d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 5 * 60_000;
+              const online = d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 10 * 60_000;
               return (
                 <Card key={d.id} className="border-0 shadow p-5">
                   <div className="flex items-start justify-between gap-3">
