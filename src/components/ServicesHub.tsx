@@ -151,7 +151,7 @@ export default function ServicesHub() {
               }}
             >
               <div className="absolute inset-0 pointer-events-none">
-                <Image src="/assets/servicehub.png" alt="What We Offer" fill style={{ objectFit: "contain" }} priority />
+                <Image src="/assets/servicehub.png" alt="What We Offer" fill sizes="(min-width: 1024px) 33vw, 350px" style={{ objectFit: "contain" }} priority />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-[22%]">
                   <p className="font-semibold tracking-[0.18em] uppercase text-gray-400 mb-1 sm:mb-2" style={{ fontFamily: FONT, fontSize: "clamp(7px, 0.8vw, 12px)" }}>What We Offer</p>
                   <h2 className="font-bold text-gray-900 leading-tight" style={{ fontFamily: FONT, fontSize: "clamp(10px, 1.8vw, 25px)" }}>Six things that actually move the needle.</h2>
@@ -171,7 +171,7 @@ export default function ServicesHub() {
               transform: visible ? "scale(1)" : "scale(0.9)" 
             }}
           >
-            <Image src="/assets/servicehub.png" alt="What We Offer" fill style={{ objectFit: "contain" }} priority />
+            <Image src="/assets/servicehub.png" alt="What We Offer" fill sizes="(min-width: 640px) 350px, 300px" style={{ objectFit: "contain" }} priority />
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-[22%] pointer-events-none">
               <p className="font-semibold tracking-[0.18em] uppercase text-gray-400 mb-1 sm:mb-2" style={{ fontFamily: FONT, fontSize: "clamp(9px, 2.5vw, 11px)" }}>What We Offer</p>
               <h2 className="font-bold text-gray-900 leading-tight text-[17px] sm:text-[21px]" style={{ fontFamily: FONT }}>Six things that actually move the needle.</h2>

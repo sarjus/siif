@@ -120,6 +120,7 @@ export const Hero = () => {
               src="/assets/image 1.png"
               alt="Rocket Trail Desktop"
               fill
+              sizes="120vw"
               className="object-contain object-left"
               priority
             />
@@ -131,6 +132,7 @@ export const Hero = () => {
                 src="/assets/image 1.png"
                 alt="Rocket Trail Mobile"
                 fill
+                sizes="120vw"
                 className="object-contain object-left"
                 priority
               />
@@ -143,6 +145,7 @@ export const Hero = () => {
               width={450}
               height={225}
               className="w-full h-auto object-contain drop-shadow-[20px_20px_50px_rgba(0,0,0,0.1)] relative z-20"
+              style={{ height: 'auto' }}
               priority
             />
           </div>

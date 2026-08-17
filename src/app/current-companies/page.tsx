@@ -97,6 +97,25 @@ const companies: CompanyWithWebsite[] = [
     location: 'Kerala',
     focus: 'Power Systems & Energy Infrastructure',
   },
+  {
+    id: 'korus-automation',
+    name: 'Korus Automation',
+    logo: '/assets/Startups/Korus_logo.jpg',
+    tagline: 'Intelligence at the Edge',
+    description:
+      'Korus Automation builds offline-first AI hardware that solves practical bottlenecks in agriculture, accessibility, and infrastructure. The company delivers custom engineering, deploy-ready products, and research-backed systems designed for low-latency, privacy-preserving operation without cloud dependency.',
+    domains: [
+      'Edge AI',
+      'Hardware Engineering',
+      'Embedded Systems',
+      'Agriculture Technology',
+      'Accessibility Solutions',
+      'Infrastructure Automation',
+    ],
+    location: 'Kottayam, Kerala',
+    focus: 'Offline-First AI Hardware & Automation',
+    website: 'https://korus-automation.vercel.app/',
+  },
 ];
 
 export default function CurrentCompaniesPage() {
