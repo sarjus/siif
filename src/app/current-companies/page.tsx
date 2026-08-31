@@ -116,6 +116,28 @@ const companies: CompanyWithWebsite[] = [
     focus: 'Offline-First AI Hardware & Automation',
     website: 'https://korus-automation.vercel.app/',
   },
+  {
+    id: 'leeds-digital',
+    name: 'Leeds Digital',
+    logo: '/assets/Startups/LeedsDigital Logo.jpeg',
+    tagline: 'Research-Led Digital Product Development',
+    description:
+      'Leeds Digital is a design-first digital agency that builds scalable, enterprise-grade web apps, mobile apps, custom software, and e-commerce solutions. Alongside development, the company operates dedicated design, marketing, and academy verticals, with the academy training talent and funneling top graduates into the agency. Its intensive discovery and research phase before any code is written positions Leeds Digital as a strategic technical partner rather than a task-executing vendor.',
+    domains: [
+      'Product Discovery',
+      'Research & Strategy',
+      'Enterprise Web Apps',
+      'Mobile App Development',
+      'Custom Software',
+      'E-Commerce Solutions',
+      'Design',
+      'Marketing',
+      'Talent Academy',
+    ],
+    location: 'India',
+    focus: 'Design-First Software Product Development',
+    website: 'https://leedsdigital.in/',
+  },
 ];
 
 export default function CurrentCompaniesPage() {
