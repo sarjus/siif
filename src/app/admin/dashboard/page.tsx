@@ -18,7 +18,6 @@ import {
   Landmark,
   ReceiptText,
   Settings,
-  Upload,
   Users,
   WalletCards,
 } from 'lucide-react';
@@ -48,7 +47,6 @@ const sections: Section[] = [
     items: [
       { label: 'Fee Configuration', description: 'Set per-company monthly fee plans', href: '/admin/fee-management/configuration', icon: Settings },
       { label: 'Monthly Invoices', description: 'Invoice generation and payment status', href: '/admin/fee-management/invoices', icon: FileText },
-      { label: 'Payment Submissions', description: 'Verify company-submitted payment proofs', href: '/admin/fee-management/payment-submissions', icon: Upload },
     ],
   },
   {

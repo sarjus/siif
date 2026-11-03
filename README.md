@@ -26,8 +26,8 @@ photos are stored on the local filesystem.
    ```
 
 The MySQL schema creates a fresh database and default ledger categories. It does
-not import or recover application, fee, attendance, or user records from the
-previous database. Existing users must create accounts or receive new passwords.
+not import or recover application, fee, or user records from the previous
+database. Existing users must create accounts or receive new passwords.
 The admin bootstrap command is only for the first administrator and refuses to
 run once an active admin account exists.
 
@@ -39,6 +39,15 @@ credentials when SMTP is configured. If the email cannot be sent, the admin
 screen displays the temporary password once so it can be shared securely. An
 existing application or account with that email must be resolved first rather
 than creating a duplicate.
+
+Attendance tracking and its biometric-device integration have been removed.
+For an existing MySQL installation, back up the database and run
+[`remove_attendance_tables.sql`](./remove_attendance_tables.sql) to delete the
+attendance records and tables.
+
+Company payment submissions (proof-of-payment uploads and admin verification)
+have been removed. For an existing database, back up and run
+[`remove_payment_submissions_table.sql`](./remove_payment_submissions_table.sql).
 
 Set `UPLOAD_DIR` to a persistent writable directory in production. Its default
 is `uploads`, with photos stored in `uploads/incubatee-photos`. Filesystem

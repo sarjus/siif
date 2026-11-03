@@ -16,8 +16,8 @@ let pool: Pool | undefined;
 
 const TABLES = new Set([
   'application_assignments', 'application_references', 'application_status_history',
-  'applications', 'attendance_devices', 'attendance_logs', 'attendance_user_mapping',
-  'company_deposits', 'company_payment_submissions', 'conference_bookings',
+  'applications',
+  'company_deposits', 'conference_bookings',
   'fee_collections', 'fee_revision_history', 'incubatees',
   'incubation_fee_invoices', 'incubation_fee_settings', 'ledger_categories',
   'notifications', 'requested_services', 'reviewers', 'siif_counters', 'siif_ledger',
@@ -121,10 +121,8 @@ const relationKeys = (leftTable: string, rightTable: string) => {
     [`${rightPrefix}_id`, 'id'],
   ];
   const explicitRelations: Record<string, Array<[string, string]>> = {
-    'attendance_logs:attendance_devices': [['device_id', 'id']],
     'fee_collections:incubation_fee_invoices': [['invoice_id', 'id']],
     'fee_collections:company_deposits': [['deposit_id', 'id']],
-    'company_payment_submissions:incubation_fee_invoices': [['invoice_id', 'id']],
     'siif_staff_payments:siif_staff': [['staff_id', 'id']],
   };
   pairs.unshift(...(explicitRelations[`${leftTable}:${rightTable}`] || []));
@@ -198,7 +196,7 @@ const accessPredicate = (table: string, user: AppUser, values: ExecuteValues[], 
 
   const companyTables = new Set([
     'applications', 'incubation_fee_settings', 'company_deposits', 'incubation_fee_invoices',
-    'fee_collections', 'notifications', 'conference_bookings', 'company_payment_submissions',
+    'fee_collections', 'notifications',     'conference_bookings',
     'incubatees',
   ]);
   if (role === 'company' && companyTables.has(table)) {

@@ -9,14 +9,12 @@ import {
   CreditCard,
   FileBarChart,
   FileText,
-  Fingerprint,
   Gauge,
   Landmark,
   LayoutDashboard,
   LogOut,
   ReceiptText,
   Settings,
-  Upload,
   Users,
   WalletCards,
   Banknote,
@@ -50,7 +48,6 @@ const navSections = [
     items: [
       { label: 'Fee Configuration', href: '/admin/fee-management/configuration', description: 'Set per-company fee plans', icon: Settings },
       { label: 'Monthly Invoices', href: '/admin/fee-management/invoices', description: 'Invoice generation & status', icon: FileText },
-      { label: 'Payment Submissions', href: '/admin/fee-management/payment-submissions', description: 'Verify company payment proofs', icon: Upload },
     ],
   },
   {
@@ -76,7 +73,6 @@ const navSections = [
     items: [
       { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: Banknote },
       { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
-      { label: 'Attendance', href: '/admin/attendance', description: 'Biometric attendance — eSSL F22 Pro', icon: Fingerprint },
     ],
   },
 ];

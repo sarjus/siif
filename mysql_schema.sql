@@ -280,26 +280,6 @@ CREATE TABLE IF NOT EXISTS fee_revision_history (
   CONSTRAINT fk_fee_revision_application FOREIGN KEY (company_id) REFERENCES applications(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS company_payment_submissions (
-  id CHAR(36) NOT NULL PRIMARY KEY,
-  company_id CHAR(36) NOT NULL,
-  invoice_id CHAR(36) NULL,
-  amount_paid DECIMAL(12,2) NOT NULL,
-  payment_mode VARCHAR(40) NOT NULL,
-  transaction_reference VARCHAR(255) NULL,
-  payment_date DATE NOT NULL,
-  remarks TEXT NULL,
-  status VARCHAR(30) NOT NULL DEFAULT 'pending',
-  receipt_number VARCHAR(80) NULL,
-  reviewed_by VARCHAR(320) NULL,
-  reviewed_at DATETIME NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_payment_submissions_company (company_id),
-  INDEX idx_payment_submissions_status (status),
-  CONSTRAINT fk_payment_submission_application FOREIGN KEY (company_id) REFERENCES applications(id) ON DELETE CASCADE,
-  CONSTRAINT fk_payment_submission_invoice FOREIGN KEY (invoice_id) REFERENCES incubation_fee_invoices(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS conference_bookings (
   id CHAR(36) NOT NULL PRIMARY KEY,
   company_id CHAR(36) NOT NULL,
@@ -345,47 +325,6 @@ CREATE TABLE IF NOT EXISTS incubatees (
   INDEX idx_incubatee_company (company_id),
   INDEX idx_incubatee_status (status),
   CONSTRAINT fk_incubatee_application FOREIGN KEY (company_id) REFERENCES applications(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS attendance_devices (
-  id CHAR(36) NOT NULL PRIMARY KEY,
-  serial_no VARCHAR(100) NOT NULL UNIQUE,
-  name VARCHAR(255) NOT NULL DEFAULT '',
-  location VARCHAR(255) NULL,
-  last_seen DATETIME NULL,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS attendance_logs (
-  id CHAR(36) NOT NULL PRIMARY KEY,
-  device_id CHAR(36) NULL,
-  device_sn VARCHAR(100) NOT NULL,
-  pin VARCHAR(100) NOT NULL,
-  punch_time DATETIME NOT NULL,
-  punch_type SMALLINT NULL,
-  verify_type SMALLINT NULL,
-  work_code VARCHAR(100) NULL,
-  raw_line TEXT NULL,
-  incubatee_id CHAR(36) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_attendance_device_pin_time (device_sn, pin, punch_time),
-  INDEX idx_attendance_pin (pin),
-  INDEX idx_attendance_time (punch_time),
-  INDEX idx_attendance_incubatee (incubatee_id),
-  INDEX idx_attendance_device (device_id),
-  CONSTRAINT fk_attendance_device FOREIGN KEY (device_id) REFERENCES attendance_devices(id) ON DELETE SET NULL,
-  CONSTRAINT fk_attendance_incubatee FOREIGN KEY (incubatee_id) REFERENCES incubatees(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS attendance_user_mapping (
-  id CHAR(36) NOT NULL PRIMARY KEY,
-  device_sn VARCHAR(100) NOT NULL,
-  pin VARCHAR(100) NOT NULL,
-  incubatee_id CHAR(36) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_attendance_mapping_device_pin (device_sn, pin),
-  CONSTRAINT fk_attendance_mapping_incubatee FOREIGN KEY (incubatee_id) REFERENCES incubatees(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS ledger_categories (
