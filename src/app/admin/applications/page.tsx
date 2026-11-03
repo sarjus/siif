@@ -30,7 +30,7 @@ export default function ApplicationsPage() {
   const [createCompanyError, setCreateCompanyError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
-  const [companyForm, setCompanyForm] = useState({
+  const emptyCompanyForm = {
     businessName: '',
     leadName: '',
     email: '',
@@ -42,7 +42,9 @@ export default function ApplicationsPage() {
     stageOfStartup: '',
     legalStatus: '',
     businessDescription: '',
-  });
+  };
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,12 +70,56 @@ export default function ApplicationsPage() {
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
+  const openEditCompany = async (app: Application) => {
+    setError(null);
+    setNotice(null);
+    setTemporaryPassword(null);
+    setCreateCompanyError(null);
+    try {
+      const response = await fetch(`/api/admin/companies/${app.id}`, { headers: await getAuthHeaders() });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to load company details.');
+      setCompanyForm(result.company);
+      setEditingId(app.id);
+      setShowCreateCompany(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load company details.');
+    }
+  };
+
+  const closeCompanyModal = () => {
+    setShowCreateCompany(false);
+    setEditingId(null);
+    setCompanyForm(emptyCompanyForm);
+    setCreateCompanyError(null);
+  };
+
   const handleCreateCompany = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCreatingCompany(true);
     setCreateCompanyError(null);
     setNotice(null);
     setTemporaryPassword(null);
+
+    if (editingId) {
+      try {
+        const response = await fetch(`/api/admin/companies/${editingId}`, {
+          method: 'PATCH',
+          headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify(companyForm),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to update company.');
+        setApplications((current) => current.map((a) => (a.id === editingId ? { ...a, ...result.application } : a)));
+        closeCompanyModal();
+        setNotice('Company details updated.');
+      } catch (err) {
+        setCreateCompanyError(err instanceof Error ? err.message : 'Failed to update company.');
+      } finally {
+        setCreatingCompany(false);
+      }
+      return;
+    }
 
     try {
       const response = await fetch('/api/admin/companies', {
@@ -86,19 +132,7 @@ export default function ApplicationsPage() {
 
       setApplications((current) => [result.application as Application, ...current]);
       setShowCreateCompany(false);
-      setCompanyForm({
-        businessName: '',
-        leadName: '',
-        email: '',
-        mobilePhone: '',
-        postalAddress: '',
-        city: '',
-        state: '',
-        sector: '',
-        stageOfStartup: '',
-        legalStatus: '',
-        businessDescription: '',
-      });
+      setCompanyForm(emptyCompanyForm);
 
       try {
         const emailResponse = await fetch('/api/notifications/company-login-email', {
@@ -180,7 +214,7 @@ export default function ApplicationsPage() {
           <h2 className="font-semibold text-[#4A4A4A]">Add an existing incubated company</h2>
           <p className="mt-1 text-sm text-[#777]">Create an approved company record and first-login account from the admin portal.</p>
         </div>
-        <button onClick={() => { setCreateCompanyError(null); setShowCreateCompany(true); }}
+        <button onClick={() => { setCreateCompanyError(null); setEditingId(null); setCompanyForm(emptyCompanyForm); setShowCreateCompany(true); }}
           className="shrink-0 rounded-lg bg-[#FF3B3B] px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700">
           + Add Company
         </button>
@@ -245,6 +279,12 @@ export default function ApplicationsPage() {
                         className="rounded-lg bg-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700">
                         View
                       </a>
+                      {app.status === 'approved' && (
+                        <button onClick={() => openEditCompany(app)}
+                          className="rounded-lg border border-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-[#FF3B3B] hover:bg-[#FF3B3B] hover:text-white transition-all">
+                          Edit
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(app)} disabled={deletingId === app.id}
                         className="rounded-lg border border-[#DC2626] px-4 py-1.5 text-sm font-semibold text-[#DC2626] hover:bg-[#DC2626] hover:text-white disabled:opacity-50 transition-all">
                         {deletingId === app.id ? 'Deleting...' : 'Delete'}
@@ -264,10 +304,10 @@ export default function ApplicationsPage() {
             role="dialog" aria-modal="true" aria-labelledby="create-company-title">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 id="create-company-title" className="text-xl font-semibold text-[#333]">Add Existing Company</h2>
-                <p className="mt-1 text-sm text-[#777]">The company will be marked approved and a login will be created.</p>
+                <h2 id="create-company-title" className="text-xl font-semibold text-[#333]">{editingId ? 'Edit Company Details' : 'Add Existing Company'}</h2>
+                <p className="mt-1 text-sm text-[#777]">{editingId ? 'Changing the email also changes the company login email.' : 'The company will be marked approved and a login will be created.'}</p>
               </div>
-              <button type="button" onClick={() => setShowCreateCompany(false)}
+              <button type="button" onClick={closeCompanyModal}
                 className="rounded px-2 text-2xl leading-none text-gray-500 hover:bg-gray-100" aria-label="Close">×</button>
             </div>
 
@@ -312,15 +352,15 @@ export default function ApplicationsPage() {
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-normal" />
                 </label>
               </div>
-              <p className="text-xs text-[#777]">
+              {!editingId && <p className="text-xs text-[#777]">
                 A secure temporary password will be generated. The account must set a new password at first login.
-              </p>
+              </p>}
               <div className="flex justify-end gap-3 border-t pt-4">
-                <button type="button" onClick={() => setShowCreateCompany(false)}
+                <button type="button" onClick={closeCompanyModal}
                   className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700">Cancel</button>
                 <button type="submit" disabled={creatingCompany}
                   className="rounded-lg bg-[#FF3B3B] px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
-                  {creatingCompany ? 'Creating...' : 'Create Company & Login'}
+                  {creatingCompany ? (editingId ? 'Saving...' : 'Creating...') : (editingId ? 'Save Changes' : 'Create Company & Login')}
                 </button>
               </div>
             </form>
