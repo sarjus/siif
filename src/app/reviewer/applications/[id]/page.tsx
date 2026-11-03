@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase, formatApplicationNumber, getSafeSession } from '@/lib/supabase';
+import { database, formatApplicationNumber, getSafeSession } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -323,16 +323,16 @@ export default function ReviewerApplicationPage() {
       const session = await getSafeSession();
       if (!session) { router.push('/login'); return; }
 
-      const { data: reviewerData } = await supabase
+      const { data: reviewerData } = await database
         .from('reviewers').select('id').eq('user_id', session.user.id).maybeSingle();
       if (!reviewerData) { router.push('/login'); return; }
 
-      const { data: appData, error: appErr } = await supabase
+      const { data: appData, error: appErr } = await database
         .from('applications').select('*').eq('id', applicationId).single();
       if (appErr) throw appErr;
       setApplication(appData);
 
-      const { data: assignData, error: assignErr } = await supabase
+      const { data: assignData, error: assignErr } = await database
         .from('application_assignments')
         .select('id, review_status, review_comments')
         .eq('application_id', applicationId)
@@ -383,7 +383,7 @@ export default function ReviewerApplicationPage() {
     try {
       const payload = { ...review, __structured: true };
       const newStatus = finalSubmit ? 'completed' : (reviewStatus === 'pending' ? 'in_progress' : reviewStatus);
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await database
         .from('application_assignments')
         .update({
           review_status: newStatus,

@@ -1,17 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Session } from '@supabase/supabase-js';
+import type { AppSession } from '@/lib/auth-types';
+import { authClient } from '@/lib/auth-client';
+import { createBrowserMysqlClient } from '@/lib/mysql-client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Create Supabase client for client-side operations
-// auth.debug: false suppresses internal SDK console errors (e.g. "Invalid Refresh Token")
-// that are already handled gracefully in getSafeSession().
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    debug: false,
-  },
-});
+export const database = createBrowserMysqlClient(authClient);
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -20,8 +11,8 @@ export const formatApplicationNumber = (id: string) => {
   return `SIIF-${compact.slice(-10)}`;
 };
 
-export const getSafeSession = async (): Promise<Session | null> => {
-  const { data, error } = await supabase.auth.getSession();
+export const getSafeSession = async (): Promise<AppSession | null> => {
+  const { data, error } = await database.auth.getSession();
 
   if (!error) {
     const session = data.session;
@@ -34,14 +25,14 @@ export const getSafeSession = async (): Promise<Session | null> => {
       return session;
     }
 
-    const { data: refreshedData, error: refreshError } = await supabase.auth.refreshSession();
+    const { data: refreshedData, error: refreshError } = await database.auth.refreshSession();
     if (!refreshError) {
       return refreshedData.session;
     }
 
     const refreshMessage = refreshError.message || '';
     if (refreshMessage.includes('Invalid Refresh Token') || refreshMessage.includes('Refresh Token Not Found')) {
-      await supabase.auth.signOut();
+      await database.auth.signOut();
       return null;
     }
 
@@ -50,7 +41,7 @@ export const getSafeSession = async (): Promise<Session | null> => {
 
   const message = error.message || '';
   if (message.includes('Invalid Refresh Token') || message.includes('Refresh Token Not Found')) {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     return null;
   }
 
@@ -59,21 +50,17 @@ export const getSafeSession = async (): Promise<Session | null> => {
 
 export const getAuthHeaders = async () => {
   const session = await getSafeSession();
-  const token = session?.access_token;
-
-  if (!token) {
+  if (!session) {
     throw new Error('Authentication required.');
   }
 
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+  return {};
 };
 
-// Supabase operations for incubation applications
+// Database operations for incubation applications
 export const incubationApi = {
   // Submit application
-  async submitApplication(formData: any, applicationId?: string) {
+  async submitApplication(formData: Record<string, unknown>, applicationId?: string) {
     try {
       console.log('Attempting to insert form data with keys:', Object.keys(formData));
 
@@ -81,7 +68,7 @@ export const incubationApi = {
       let error;
 
       if (applicationId) {
-        const result = await supabase
+        const result = await database
           .from('applications')
           .update({ ...formData, updated_at: new Date().toISOString() })
           .eq('id', applicationId)
@@ -89,7 +76,7 @@ export const incubationApi = {
         data = result.data;
         error = result.error;
       } else {
-        const result = await supabase
+        const result = await database
           .from('applications')
           .insert([formData])
           .select();
@@ -98,7 +85,7 @@ export const incubationApi = {
       }
       
       if (error) {
-        console.error('Supabase error details:', {
+        console.error('Database error details:', {
           error: error,
           message: error?.message || 'Unknown error',
           code: error?.code || 'No code',
@@ -118,10 +105,11 @@ export const incubationApi = {
   },
 
   // Save references for an application
-  async saveReferences(references: object[]) {
-    const { data, error } = await supabase
+  async saveReferences(references: object[], mobilePhone: string) {
+    const { data, error } = await database
       .from('application_references')
       .insert(references)
+      .eq('application_phone', mobilePhone)
       .select();
 
     if (error) throw error;
@@ -129,19 +117,21 @@ export const incubationApi = {
   },
 
   // Replace references for an application (used when resubmitting a draft)
-  async replaceReferences(applicationId: string, references: object[]) {
-    const { error: deleteError } = await supabase
+  async replaceReferences(applicationId: string, references: object[], mobilePhone: string) {
+    const { error: deleteError } = await database
       .from('application_references')
       .delete()
-      .eq('application_id', applicationId);
+      .eq('application_id', applicationId)
+      .eq('application_phone', mobilePhone);
 
     if (deleteError) throw deleteError;
 
     if (references.length === 0) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('application_references')
       .insert(references)
+      .eq('application_phone', mobilePhone)
       .select();
 
     if (error) throw error;
@@ -149,9 +139,9 @@ export const incubationApi = {
   },
 
   // Save draft application (insert new or update existing)
-  async saveDraft(formData: any, applicationId?: string) {
+  async saveDraft(formData: Record<string, unknown>, applicationId?: string) {
     if (applicationId) {
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from('applications')
         .update({ ...formData, status: 'draft', updated_at: new Date().toISOString() })
         .eq('id', applicationId)
@@ -161,7 +151,7 @@ export const incubationApi = {
       return data;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('applications')
       .insert([{ ...formData, status: 'draft' }])
       .select();
@@ -177,7 +167,7 @@ export const incubationApi = {
     const trimmedPhone = mobilePhone.trim();
 
     if (UUID_REGEX.test(trimmedNumber)) {
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from('applications')
         .select('*')
         .eq('id', trimmedNumber)
@@ -188,29 +178,25 @@ export const incubationApi = {
       return data;
     }
 
-    const { data, error } = await supabase
-      .from('applications')
-      .select('*')
-      .eq('mobile_phone', trimmedPhone)
-      .order('submitted_at', { ascending: false });
-
-    if (error) throw error;
-
-    const match = (data || []).find((application) => {
-      const shortNumber = formatApplicationNumber(application.id).toUpperCase();
-      return shortNumber === normalizedNumber || application.id.toUpperCase() === normalizedNumber;
-    });
-
-    if (!match) {
+    const shortNumber = normalizedNumber.match(/^SIIF-([0-9A-F]{10})$/);
+    if (!shortNumber) {
       throw new Error('Application not found for the provided Application Number and Mobile Phone.');
     }
 
-    return match;
+    const { data, error } = await database
+      .from('applications')
+      .select('*')
+      .eq('mobile_phone', trimmedPhone)
+      .ilike('id', `%${shortNumber[1]}`)
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   // Get application by ID
   async getApplicationById(id: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('applications')
       .select('*')
       .eq('id', id)
@@ -222,7 +208,7 @@ export const incubationApi = {
 
   // Get all applications (admin)
   async getAllApplications(filters?: { status?: string; limit?: number; offset?: number }) {
-    let query = supabase.from('applications').select('*');
+    let query = database.from('applications').select('*');
     
     if (filters?.status) {
       query = query.eq('status', filters.status);
@@ -244,7 +230,7 @@ export const incubationApi = {
 
   // Update application status
   async updateApplicationStatus(id: string, status: string, notes?: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('applications')
       .update({ 
         status,
@@ -257,7 +243,7 @@ export const incubationApi = {
     
     // Log status change
     if (data) {
-      await supabase
+      await database
         .from('application_status_history')
         .insert({
           application_id: id,
@@ -272,7 +258,7 @@ export const incubationApi = {
 
   // Get team members for application
   async getTeamMembers(applicationId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('team_members')
       .select('*')
       .eq('application_id', applicationId)
@@ -283,11 +269,12 @@ export const incubationApi = {
   },
 
   // Get references for application
-  async getReferences(applicationId: string) {
-    const { data, error } = await supabase
+  async getReferences(applicationId: string, mobilePhone: string) {
+    const { data, error } = await database
       .from('application_references')
       .select('*')
       .eq('application_id', applicationId)
+      .eq('application_phone', mobilePhone)
       .order('reference_number', { ascending: true });
     
     if (error) throw error;
@@ -296,7 +283,7 @@ export const incubationApi = {
 
   // Get requested services for application
   async getRequestedServices(applicationId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('requested_services')
       .select('*')
       .eq('application_id', applicationId);
@@ -307,7 +294,7 @@ export const incubationApi = {
 
   // Search applications by email
   async searchByEmail(email: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('applications')
       .select('*')
       .ilike('email', `%${email}%`);
@@ -318,7 +305,7 @@ export const incubationApi = {
 
   // Get application statistics
   async getApplicationStats() {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('applications')
       .select('status');
     

@@ -1,12 +1,10 @@
 /**
- * Short-lived HMAC tokens for photo proxy URLs.
+ * Short-lived HMAC tokens for admin photo proxy URLs.
  *
- * Why: Supabase signed URLs are publicly accessible to anyone who has the URL.
- * Instead of embedding them in the browser we return proxy URLs of the form:
+ * Admin photo URLs use the form:
  *   /api/admin/incubatees/photo?path=photos/xxx.jpg&token=<hmac>&exp=<ts>
  *
  * The proxy verifies the HMAC and expiry server-side, then streams the image.
- * The Supabase signed URL is never sent to the browser.
  *
  * SERVER-SIDE ONLY.
  */

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 // GET — list all staff
 export async function GET(request: NextRequest) {
@@ -7,8 +7,8 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
-    const { data, error } = await supabaseAdmin
+    const databaseAdmin = createDatabaseClient();
+    const { data, error } = await databaseAdmin
       .from('siif_staff')
       .select('*')
       .order('is_active', { ascending: false })
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment type must be salary or honorarium.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
     const record = {
       name: name.trim(),
       designation: designation.trim(),
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (id) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from('siif_staff')
         .update(record)
         .eq('id', id)
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       return NextResponse.json({ staff: data });
     } else {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from('siif_staff')
         .insert(record)
         .select()

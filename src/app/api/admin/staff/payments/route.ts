@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { nextPaymentNumber } from '@/lib/sequential-numbers';
 
 // GET — list all staff payments (with optional staff_id filter)
@@ -8,11 +8,11 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
     const { searchParams } = new URL(request.url);
     const staffId = searchParams.get('staffId');
 
-    let query = supabaseAdmin
+    let query = databaseAdmin
       .from('siif_staff_payments')
       .select('*, siif_staff(name, designation, payment_type)')
       .order('payment_month', { ascending: false })
@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Amount must be greater than zero.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Verify staff exists
-    const { data: staff } = await supabaseAdmin
+    const { data: staff } = await databaseAdmin
       .from('siif_staff')
       .select('id, name, designation, payment_type')
       .eq('id', staffId)
@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
     if (!staff) return NextResponse.json({ error: 'Staff member not found.' }, { status: 404 });
 
     // Generate sequential payment number
-    const paymentNumber = await nextPaymentNumber(supabaseAdmin);
+    const paymentNumber = await nextPaymentNumber(databaseAdmin);
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await databaseAdmin
       .from('siif_staff_payments')
       .insert({
         payment_number: paymentNumber,

@@ -7,15 +7,15 @@
  * for the same (device_sn, pin) so historical records get linked too.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const database = createDatabaseClient();
+    const { data, error } = await database
       .from('attendance_user_mapping')
       .select(`
         id, device_sn, pin, created_at,
@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Upsert mapping
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('attendance_user_mapping')
       .upsert(
         {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     // Back-fill existing logs for this device+pin
-    await supabase
+    await database
       .from('attendance_logs')
       .update({ incubatee_id: body.incubateeId })
       .eq('device_sn', body.deviceSn.trim())
@@ -89,8 +89,8 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required.' }, { status: 400 });
 
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase
+    const database = createDatabaseClient();
+    const { error } = await database
       .from('attendance_user_mapping')
       .delete()
       .eq('id', id);

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { Fingerprint, Monitor, Link2, RefreshCw, Plus, Trash2, Wifi, WifiOff } from 'lucide-react';
@@ -202,7 +202,7 @@ export default function AttendancePage() {
     else { const p = await res.json(); setError(p.error); }
   };
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
   // ─── Derived stats ────────────────────────────────────────────────────────
   const todayLogs = useMemo(() => {

@@ -34,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
@@ -43,6 +44,8 @@ yarn-error.log*
 next-env.d.ts
 
 *.md
+!README.md
+!README.md
 billing_month_migration_may_to_june_2026.sql
 .gitignore
 fee_revision_schema.sql

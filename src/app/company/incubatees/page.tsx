@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import CompanyShell from '@/components/CompanyShell';
 import { Card } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function CompanyIncubatyeesPage() {
     const role = String(session.user.user_metadata?.role || '');
     if (role !== 'company') { router.push('/login'); return; }
 
-    const { data: app } = await supabase.from('applications')
+    const { data: app } = await database.from('applications')
       .select('id, business_name, email')
       .ilike('email', session.user.email || '')
       .eq('status', 'approved').maybeSingle();
@@ -138,7 +138,7 @@ export default function CompanyIncubatyeesPage() {
     setShowForm(true); setError(null);
   };
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (

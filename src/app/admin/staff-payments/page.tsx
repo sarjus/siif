@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/fee-management';
@@ -222,7 +222,7 @@ export default function StaffPaymentsPage() {
     payments.reduce((sum, p) => sum + Number(p.amount || 0), 0), [payments]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 

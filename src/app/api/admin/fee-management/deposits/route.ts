@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { computeDepositStatus } from '@/lib/fee-management';
 import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
@@ -8,11 +8,11 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     const [{ data: companies, error: compError }, { data: deposits, error: depError }] = await Promise.all([
-      supabaseAdmin.from('applications').select('id, business_name, email').eq('status', 'approved').order('business_name', { ascending: true }),
-      supabaseAdmin.from('company_deposits').select('*, applications(business_name, email)').order('created_at', { ascending: false }),
+      databaseAdmin.from('applications').select('id, business_name, email').eq('status', 'approved').order('business_name', { ascending: true }),
+      databaseAdmin.from('company_deposits').select('*, applications(business_name, email)').order('created_at', { ascending: false }),
     ]);
 
     if (compError) return NextResponse.json({ error: compError.message }, { status: 400 });
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Amount must be greater than zero.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     const amountCollected = action === 'collect'
       ? Number(existingDeposit.amount_collected || 0) + numAmount
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       : Number(existingDeposit.amount_refunded || 0);
     const status = computeDepositStatus({ depositAmount: Number(existingDeposit.deposit_amount || 0), amountCollected, amountRefunded });
 
-    const { error: depositError } = await supabaseAdmin
+    const { error: depositError } = await databaseAdmin
       .from('company_deposits')
       .update({
         amount_collected: amountCollected,
@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
 
     if (depositError) return NextResponse.json({ error: depositError.message }, { status: 400 });
 
-    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
+    const receiptNumber = await nextReceiptNumber(databaseAdmin);
     const collectionType = action === 'collect' ? 'refundable_deposit' : 'deposit_refund';
 
-    const { error: collectionError } = await supabaseAdmin.from('fee_collections').insert({
+    const { error: collectionError } = await databaseAdmin.from('fee_collections').insert({
       company_id: companyId,
       receipt_number: receiptNumber,
       collection_type: collectionType,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (collectionError) return NextResponse.json({ error: collectionError.message }, { status: 400 });
 
     // Fetch company name for receipt
-    const { data: appData } = await supabaseAdmin.from('applications').select('business_name, email').eq('id', companyId).maybeSingle();
+    const { data: appData } = await databaseAdmin.from('applications').select('business_name, email').eq('id', companyId).maybeSingle();
 
     return NextResponse.json({
       success: true,

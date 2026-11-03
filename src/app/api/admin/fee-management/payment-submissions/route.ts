@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { computeInvoiceStatus } from '@/lib/fee-management';
 import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await databaseAdmin
       .from('company_payment_submissions')
       .select(`
         *,
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Action must be approve or reject.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Fetch the submission
-    const { data: submission, error: fetchError } = await supabaseAdmin
+    const { data: submission, error: fetchError } = await databaseAdmin
       .from('company_payment_submissions')
       .select('*')
       .eq('id', submissionId)
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'reject') {
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from('company_payment_submissions')
         .update({ status: 'rejected', reviewed_by: user.email, reviewed_at: new Date().toISOString() })
         .eq('id', submissionId);
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Approve: create fee_collection record and update invoice if applicable
-    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
+    const receiptNumber = await nextReceiptNumber(databaseAdmin);
     const amount = Number(submission.amount_paid || 0);
 
     let invoiceNumber: string | null = null;
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     if (submission.invoice_id) {
       // Fetch invoice and update it
-      const { data: invoice, error: invFetchError } = await supabaseAdmin
+      const { data: invoice, error: invFetchError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .select('*, incubation_fee_settings!inner(grace_period_days)')
         .eq('id', submission.invoice_id)
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
           gracePeriodDays,
         });
 
-        await supabaseAdmin
+        await databaseAdmin
           .from('incubation_fee_invoices')
           .update({ amount_paid: nextPaid, status: nextStatus })
           .eq('id', submission.invoice_id);
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert fee collection
-    const { error: collectionError } = await supabaseAdmin
+    const { error: collectionError } = await databaseAdmin
       .from('fee_collections')
       .insert({
         company_id: submission.company_id,
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark submission as approved
-    await supabaseAdmin
+    await databaseAdmin
       .from('company_payment_submissions')
       .update({
         status: 'approved',
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       .eq('id', submissionId);
 
     // Fetch company name for receipt
-    const { data: appData } = await supabaseAdmin
+    const { data: appData } = await databaseAdmin
       .from('applications')
       .select('business_name, email')
       .eq('id', submission.company_id)

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import AdminShell from '@/components/AdminShell';
 import { formatCurrency } from '@/lib/fee-management';
@@ -173,7 +173,7 @@ export default function FeeManagementOverviewPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
   const handleRunMonthlyCycle = async () => {
     setRunningCycle(true); setError(null); setNotice(null);

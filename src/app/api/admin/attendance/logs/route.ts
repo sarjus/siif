@@ -10,7 +10,7 @@
  *   punchType   — 0=In 1=Out (optional)
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
     const deviceSn = searchParams.get('deviceSn');
     const punchType = searchParams.get('punchType');
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
-    let query = supabase
+    let query = database
       .from('attendance_logs')
       .select(
         `id, device_sn, pin, punch_time, punch_type, verify_type, work_code,

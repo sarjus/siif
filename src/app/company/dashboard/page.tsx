@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import CompanyShell from '@/components/CompanyShell';
 import { Bell, CalendarClock, CheckCircle2, CreditCard, IndianRupee, WalletCards, type LucideIcon } from 'lucide-react';
@@ -47,13 +47,13 @@ export default function CompanyDashboardPage() {
       const user = session.user;
       const userEmail = (user.email || '').trim().toLowerCase();
       if (!userEmail) {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         router.push('/login');
         return;
       }
 
       if (String(user.user_metadata?.role || '') !== 'company') {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         router.push('/login');
         return;
       }
@@ -63,7 +63,7 @@ export default function CompanyDashboardPage() {
         return;
       }
 
-      const { data, error: appError } = await supabase
+      const { data, error: appError } = await database
         .from('applications')
         .select('id, business_name, lead_name, email, status, updated_at, submitted_at')
         .ilike('email', userEmail)
@@ -73,7 +73,7 @@ export default function CompanyDashboardPage() {
       if (appError) throw appError;
 
       if (!data || data.length === 0) {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         setError('Access denied. Your company account is active only for approved applications.');
         router.push('/login');
         return;
@@ -95,21 +95,21 @@ export default function CompanyDashboardPage() {
           { data: invoiceData },
           { data: notificationsData },
         ] = await Promise.all([
-          supabase
+          database
             .from('incubation_fee_settings')
             .select('monthly_fee')
             .eq('company_id', latestApplication.id)
             .maybeSingle(),
-          supabase
+          database
             .from('company_deposits')
             .select('balance_amount, status, amount_refunded')
             .eq('company_id', latestApplication.id)
             .maybeSingle(),
-          supabase
+          database
             .from('incubation_fee_invoices')
             .select('amount, amount_paid, status')
             .eq('company_id', latestApplication.id),
-          supabase
+          database
             .from('notifications')
             .select('id, title, message, sent_at')
             .eq('company_id', latestApplication.id)
@@ -145,7 +145,7 @@ export default function CompanyDashboardPage() {
   }, [fetchData]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 

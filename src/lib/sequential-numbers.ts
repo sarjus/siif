@@ -1,6 +1,6 @@
 /**
  * Sequential number generation for invoices and receipts.
- * Uses an atomic Supabase counter (next_siif_number function) to ensure
+ * Uses an atomic MySQL counter (next_siif_number function) to ensure
  * no two records ever get the same number, even under concurrent requests.
  *
  * Formats:
@@ -10,20 +10,20 @@
  * SERVER-SIDE ONLY — uses service role client.
  */
 
-import { type SupabaseClient } from '@supabase/supabase-js';
+import type { MysqlRpcClient } from '@/lib/mysql';
 
 const padSeq = (n: number) => String(n).padStart(5, '0');
 
 /**
  * Atomically get the next invoice number for the given year.
- * Calls the Supabase `next_siif_number('INV', year)` function.
+ * Calls the MySQL `next_siif_number('INV', year)` function.
  */
 export const nextInvoiceNumber = async (
-  supabaseAdmin: SupabaseClient,
+  databaseAdmin: MysqlRpcClient,
   year?: number
 ): Promise<string> => {
   const yr = year ?? new Date().getFullYear();
-  const { data, error } = await supabaseAdmin.rpc('next_siif_number', {
+  const { data, error } = await databaseAdmin.rpc('next_siif_number', {
     p_series: 'INV',
     p_year: yr,
   });
@@ -33,14 +33,14 @@ export const nextInvoiceNumber = async (
 
 /**
  * Atomically get the next receipt number for the given year.
- * Calls the Supabase `next_siif_number('RCPT', year)` function.
+ * Calls the MySQL `next_siif_number('RCPT', year)` function.
  */
 export const nextReceiptNumber = async (
-  supabaseAdmin: SupabaseClient,
+  databaseAdmin: MysqlRpcClient,
   year?: number
 ): Promise<string> => {
   const yr = year ?? new Date().getFullYear();
-  const { data, error } = await supabaseAdmin.rpc('next_siif_number', {
+  const { data, error } = await databaseAdmin.rpc('next_siif_number', {
     p_series: 'RCPT',
     p_year: yr,
   });
@@ -51,14 +51,14 @@ export const nextReceiptNumber = async (
 /**
  * Atomically get the next payment number for the given year.
  * Used for outgoing payments (salary, honorarium) from SIIF.
- * Calls the Supabase `next_siif_number('PAY', year)` function.
+ * Calls the MySQL `next_siif_number('PAY', year)` function.
  */
 export const nextPaymentNumber = async (
-  supabaseAdmin: SupabaseClient,
+  databaseAdmin: MysqlRpcClient,
   year?: number
 ): Promise<string> => {
   const yr = year ?? new Date().getFullYear();
-  const { data, error } = await supabaseAdmin.rpc('next_siif_number', {
+  const { data, error } = await databaseAdmin.rpc('next_siif_number', {
     p_series: 'PAY',
     p_year: yr,
   });
@@ -71,11 +71,11 @@ export const nextPaymentNumber = async (
  * YY (2-digit year) + SIIF + 3-digit sequence
  */
 export const nextIncubateeId = async (
-  supabaseAdmin: SupabaseClient,
+  databaseAdmin: MysqlRpcClient,
   year?: number
 ): Promise<string> => {
   const yr = year ?? new Date().getFullYear();
-  const { data, error } = await supabaseAdmin.rpc('next_siif_number', {
+  const { data, error } = await databaseAdmin.rpc('next_siif_number', {
     p_series: 'EMP',
     p_year: yr,
   });

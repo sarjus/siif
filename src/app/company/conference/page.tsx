@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import CompanyShell from '@/components/CompanyShell';
 import { Card } from '@/components/ui/card';
 import ConferenceCalendar, { type Booking } from '@/components/ConferenceCalendar';
@@ -33,7 +33,7 @@ export default function CompanyConferencePage() {
       const role = String(session.user.user_metadata?.role || '');
       if (role !== 'company') { router.push('/login'); return; }
 
-      const { data: app } = await supabase
+      const { data: app } = await database
         .from('applications')
         .select('id, business_name, email')
         .ilike('email', session.user.email || '')
@@ -72,7 +72,7 @@ export default function CompanyConferencePage() {
     }
 
     // Build local datetime then convert to ISO with timezone offset
-    // so Supabase stores the correct UTC time regardless of server timezone
+    // so MySQL stores the correct UTC time regardless of server timezone
     const toLocalISO = (date: string, time: string) => {
       const local = new Date(`${date}T${time}:00`);
       const tzOffset = -local.getTimezoneOffset(); // offset in minutes
@@ -132,7 +132,7 @@ export default function CompanyConferencePage() {
     hour: '2-digit', minute: '2-digit', hour12: false,
   });
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (

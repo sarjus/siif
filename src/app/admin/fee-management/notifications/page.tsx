@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 
@@ -74,7 +74,7 @@ export default function FeeNotificationsPage() {
     }
   };
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 

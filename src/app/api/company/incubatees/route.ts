@@ -3,7 +3,7 @@
  * POST /api/company/incubatees               — add new incubatee
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,15 +14,15 @@ export async function GET(request: NextRequest) {
     const companyId = searchParams.get('companyId');
     if (!companyId) return NextResponse.json({ error: 'companyId is required' }, { status: 400 });
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Verify ownership
-    const { data: app } = await supabase
+    const { data: app } = await database
       .from('applications').select('id').eq('id', companyId)
       .ilike('email', user.email || '').maybeSingle();
     if (!app) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('incubatees').select('*')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
@@ -53,15 +53,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company, full name and designation are required.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Verify ownership
-    const { data: app } = await supabase
+    const { data: app } = await database
       .from('applications').select('id').eq('id', companyId)
       .ilike('email', user.email || '').eq('status', 'approved').maybeSingle();
     if (!app) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('incubatees').insert({
         company_id: companyId,
         full_name: fullName.trim(),
@@ -101,17 +101,17 @@ export async function PUT(request: NextRequest) {
 
     if (!body.id || !body.companyId) return NextResponse.json({ error: 'id and companyId required' }, { status: 400 });
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Verify ownership and pending status
-    const { data: existing } = await supabase
+    const { data: existing } = await database
       .from('incubatees').select('status, company_id')
       .eq('id', body.id).maybeSingle();
 
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (existing.status !== 'pending') return NextResponse.json({ error: 'Only pending entries can be edited' }, { status: 400 });
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('incubatees').update({
         full_name: body.fullName?.trim(),
         designation: body.designation?.trim(),

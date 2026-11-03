@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,8 +13,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company accounts cannot list admin invoices.' }, { status: 403 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
-    const { data, error } = await supabaseAdmin
+    const databaseAdmin = createDatabaseClient();
+    const { data, error } = await databaseAdmin
       .from('incubation_fee_invoices')
       .select('*, applications(business_name, email)')
       .neq('status', 'void')
@@ -50,10 +50,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invoice ID is required.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // First verify the invoice exists and is not already voided
-    const { data: existing, error: fetchError } = await supabaseAdmin
+    const { data: existing, error: fetchError } = await databaseAdmin
       .from('incubation_fee_invoices')
       .select('id, status')
       .eq('id', invoiceId)
@@ -72,7 +72,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Soft-delete: mark as void so sync won't recreate it
-    const { error } = await supabaseAdmin
+    const { error } = await databaseAdmin
       .from('incubation_fee_invoices')
       .update({ status: 'void' })
       .eq('id', invoiceId);

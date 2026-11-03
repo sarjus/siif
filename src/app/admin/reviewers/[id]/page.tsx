@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState, useCallback } from 'react';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { database, getSafeSession } from '@/lib/database';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import AdminNav from '@/components/AdminNav';
@@ -57,7 +57,7 @@ export default function ReviewerDetailPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const { data: rv, error: rvErr } = await supabase
+      const { data: rv, error: rvErr } = await database
         .from('reviewers')
         .select('*')
         .eq('id', reviewerId)
@@ -65,7 +65,7 @@ export default function ReviewerDetailPage() {
       if (rvErr) throw rvErr;
       setReviewer(rv);
 
-      const { data: assigns, error: aErr } = await supabase
+      const { data: assigns, error: aErr } = await database
         .from('application_assignments')
         .select('*, applications(business_name, lead_name, email, status, submitted_at)')
         .eq('reviewer_id', reviewerId)

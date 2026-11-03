@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { nextInvoiceNumber } from '@/lib/sequential-numbers';
+import { createDatabaseClient } from '@/lib/server-auth';
 
 type CompanyProfile = {
   id: string;
@@ -44,19 +44,6 @@ export type MonthlyFeeCycleResult = {
 
 const sanitizeEnv = (value?: string | null) => (value ?? '').trim();
 const stripWrappingQuotes = (value: string) => value.replace(/^['"]+|['"]+$/g, '');
-
-const getAdminClient = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase service role configuration.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-};
 
 const getTransporter = () => {
   const smtpHost = sanitizeEnv(process.env.SMTP_HOST);
@@ -119,11 +106,11 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
     };
   }
 
-  const supabaseAdmin = getAdminClient();
+  const databaseAdmin = createDatabaseClient();
   const monthStart = currentMonthStartUtc(now);
   const billingMonth = toDateOnlyUtc(monthStart);
 
-  const { data: settingsData, error: settingsError } = await supabaseAdmin
+  const { data: settingsData, error: settingsError } = await databaseAdmin
     .from('incubation_fee_settings')
     .select(
       'id, company_id, monthly_fee, start_date, due_day, grace_period_days, status, applications(id, business_name, lead_name, email, status)'
@@ -152,7 +139,7 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
   }
 
   const companyIds = eligibleSettings.map((setting) => setting.company_id);
-  const { data: existingInvoices, error: existingError } = await supabaseAdmin
+  const { data: existingInvoices, error: existingError } = await databaseAdmin
     .from('incubation_fee_invoices')
     .select('company_id, billing_month')
     .in('company_id', companyIds)
@@ -181,7 +168,7 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
       Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), setting.due_day)
     );
     const invoiceNumber = await nextInvoiceNumber(
-      supabaseAdmin,
+      databaseAdmin,
       monthStart.getUTCFullYear()
     );
     invoicesToCreate.push({
@@ -198,7 +185,7 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
 
   let createdInvoices: CreatedInvoice[] = [];
   if (invoicesToCreate.length > 0) {
-    const { data: inserted, error: insertError } = await supabaseAdmin
+    const { data: inserted, error: insertError } = await databaseAdmin
       .from('incubation_fee_invoices')
       .insert(invoicesToCreate)
       .select('id, company_id, invoice_number, billing_month, amount, due_date');
@@ -223,10 +210,10 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
         sent_by: 'System Cron',
       };
     })
-    .filter(Boolean);
+    .filter((row): row is NonNullable<typeof row> => row !== null);
 
   if (notificationRows.length > 0) {
-    const { error: notificationError } = await supabaseAdmin
+    const { error: notificationError } = await databaseAdmin
       .from('notifications')
       .insert(notificationRows);
     if (notificationError) throw notificationError;

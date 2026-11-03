@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { incubationApi, formatApplicationNumber } from '@/lib/supabase';
+import { incubationApi, formatApplicationNumber } from '@/lib/database';
 
 interface FormData {
   businessName: string;
@@ -194,7 +194,69 @@ const toSubmissionData = (formData: FormData, status: string) => ({
   status,
 });
 
-const fromApplicationData = (application: any): FormData => ({
+type ApplicationRow = {
+  business_name: string | null;
+  lead_name: string | null;
+  sjcet_associated: string | null;
+  sjcet_association_type: string | null;
+  age: number | null;
+  residential_phone: string | null;
+  mobile_phone: string | null;
+  email: string | null;
+  postal_address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  qualification: string | null;
+  specialization: string | null;
+  institute: string | null;
+  stage_of_startup: string | null;
+  legal_status: string | null;
+  sector_domain: string[] | null;
+  nature_of_business: string | null;
+  innovation_category: string | null;
+  business_description: string | null;
+  entrepreneurial_motivation: string | null;
+  team_details: string | null;
+  company_description: string | null;
+  product_novelty: string | null;
+  competitors: string | null;
+  competitive_advantage: string | null;
+  market_size: string | null;
+  revenue_model: string | null;
+  machinery_required: string | null;
+  machinery_details: string | null;
+  market_survey: string | null;
+  market_survey_details: string | null;
+  research_validation: string | null;
+  project_cost: number | null;
+  pre_operative_expenses: number | null;
+  prototype_expenses: number | null;
+  test_marketing: number | null;
+  equipment: number | null;
+  working_capital: number | null;
+  other_requirements: number | null;
+  services_expected: string[] | null;
+  laboratory_access: boolean | number;
+  library_access: boolean | number;
+  technical_consulting: boolean | number;
+  other_services: string | null;
+  declaration: boolean | number;
+  declaration_date: string | null;
+  declaration_place: string | null;
+};
+
+type ApplicationReferenceRow = {
+  reference_number: number;
+  name: string | null;
+  organization: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
+const fromApplicationData = (application: ApplicationRow): FormData => ({
   businessName: application.business_name || '',
   leadName: application.lead_name || '',
   sjcetAssociated: application.sjcet_associated || '',
@@ -387,11 +449,14 @@ export default function IncubationForm() {
       }
 
       const mapped = fromApplicationData(application);
-      const references = await incubationApi.getReferences(application.id);
+      const references = await incubationApi.getReferences(
+        application.id,
+        application.mobile_phone || ''
+      ) as ApplicationReferenceRow[];
 
       if (references && references.length > 0) {
-        const reference1 = references.find((ref: any) => ref.reference_number === 1);
-        const reference2 = references.find((ref: any) => ref.reference_number === 2);
+        const reference1 = references.find((ref) => ref.reference_number === 1);
+        const reference2 = references.find((ref) => ref.reference_number === 2);
         mapped.reference1Name = reference1?.name || '';
         mapped.reference1Organization = reference1?.organization || '';
         mapped.reference1Address = reference1?.address || '';
@@ -434,7 +499,7 @@ export default function IncubationForm() {
         const formattedApplicationNumber = formatApplicationNumber(appId);
         setApplicationId(appId);
         setLookupApplicationNumber(formattedApplicationNumber);
-        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId));
+        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId), formData.mobilePhone);
         await sendApplicationEmail({
           applicationNumber: formattedApplicationNumber,
           status: 'draft',
@@ -475,7 +540,7 @@ export default function IncubationForm() {
         const appId = result[0].id;
         const formattedApplicationNumber = formatApplicationNumber(appId);
         setApplicationId(appId);
-        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId));
+        await incubationApi.replaceReferences(appId, buildReferencesPayload(appId), formData.mobilePhone);
         await sendApplicationEmail({
           applicationNumber: formattedApplicationNumber,
           status: 'submitted',

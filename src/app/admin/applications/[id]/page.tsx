@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase, formatApplicationNumber, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, formatApplicationNumber, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AdminShell from '@/components/AdminShell';
@@ -86,7 +86,7 @@ export default function ApplicationDetail() {
   const applicationId = params.id as string;
 
   const fetchAssignments = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await database
       .from('application_assignments')
       .select('*, reviewers(name, email)')
       .eq('application_id', applicationId)
@@ -95,7 +95,7 @@ export default function ApplicationDetail() {
   }, [applicationId]);
 
   const fetchReviewers = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await database
       .from('reviewers')
       .select('id, name, email, is_active')
       .eq('is_active', true)
@@ -107,13 +107,13 @@ export default function ApplicationDetail() {
     if (!assignReviewerId) return;
     setAssigning(true);
     try {
-      const { error: insErr } = await supabase.from('application_assignments').insert([
+      const { error: insErr } = await database.from('application_assignments').insert([
         { application_id: applicationId, reviewer_id: assignReviewerId },
       ]);
       if (insErr) throw insErr;
       // Auto-set app status to under_review
       if (application && application.status === 'submitted') {
-        await supabase
+        await database
           .from('applications')
           .update({ status: 'under_review', updated_at: new Date().toISOString() })
           .eq('id', applicationId);
@@ -130,19 +130,19 @@ export default function ApplicationDetail() {
   };
 
   const handleRemoveAssignment = async (assignmentId: string) => {
-    await supabase.from('application_assignments').delete().eq('id', assignmentId);
+    await database.from('application_assignments').delete().eq('id', assignmentId);
     await fetchAssignments();
   };
 
   const handleResetAssignment = async (assignmentId: string) => {
     if (!confirm('Reset this reviewer\'s assessment? Their scores and comments will be cleared and they can re-submit.')) return;
-    await supabase
+    await database
       .from('application_assignments')
       .update({ review_status: 'pending', review_comments: null, reviewed_at: null })
       .eq('id', assignmentId);
     // If the application was approved/rejected, bump it back to under_review
     if (application && (application.status === 'approved' || application.status === 'rejected')) {
-      await supabase
+      await database
         .from('applications')
         .update({ status: 'under_review', updated_at: new Date().toISOString() })
         .eq('id', applicationId);
@@ -162,7 +162,7 @@ export default function ApplicationDetail() {
         }
         setUserEmail(session.user.email || '');
 
-        const { data, error: fetchError } = await supabase
+        const { data, error: fetchError } = await database
           .from('applications')
           .select('*')
           .eq('id', applicationId)
@@ -174,7 +174,7 @@ export default function ApplicationDetail() {
         setStatus(data.status || 'submitted');
         setNotes(data.admin_notes || '');
 
-        const { data: refsData } = await supabase
+        const { data: refsData } = await database
           .from('application_references')
           .select('*')
           .eq('application_id', applicationId)
@@ -299,7 +299,7 @@ export default function ApplicationDetail() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 
@@ -334,7 +334,7 @@ export default function ApplicationDetail() {
     setSaving(true);
     setNotice(null);
     try {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await database
         .from('applications')
         .update({ 
           status,
@@ -344,7 +344,7 @@ export default function ApplicationDetail() {
         .eq('id', applicationId);
 
       if (updateError) {
-        console.error('Supabase update error:', {
+        console.error('Database update error:', {
           message: updateError.message,
           code: updateError.code,
           details: (updateError as any).details,

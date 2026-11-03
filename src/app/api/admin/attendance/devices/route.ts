@@ -4,15 +4,15 @@
  * PATCH /api/admin/attendance/devices         — update name/location/enabled
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const database = createDatabaseClient();
+    const { data, error } = await database
       .from('attendance_devices')
       .select('*')
       .order('created_at', { ascending: true });
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'serialNo and name are required.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const database = createDatabaseClient();
+    const { data, error } = await database
       .from('attendance_devices')
       .insert({
         serial_no: body.serialNo.trim(),
@@ -71,13 +71,13 @@ export async function PATCH(request: NextRequest) {
 
     if (!body.id) return NextResponse.json({ error: 'id is required.' }, { status: 400 });
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined)     updates.name = body.name.trim();
     if (body.location !== undefined) updates.location = body.location?.trim() || null;
     if (body.enabled !== undefined)  updates.enabled = body.enabled;
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('attendance_devices')
       .update(updates)
       .eq('id', body.id)

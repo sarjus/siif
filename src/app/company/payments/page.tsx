@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import CompanyShell from '@/components/CompanyShell';
 import { Building2, Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from 'lucide-react';
@@ -122,12 +122,12 @@ export default function CompanyPaymentsPage() {
       const user = session.user;
       const userEmail = (user.email || '').trim().toLowerCase();
       if (String(user.user_metadata?.role || '') !== 'company') {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         router.push('/login');
         return;
       }
 
-      const { data: appData, error: appError } = await supabase
+      const { data: appData, error: appError } = await database
         .from('applications')
         .select('id, business_name, lead_name, email, status, updated_at, submitted_at')
         .ilike('email', userEmail)
@@ -145,11 +145,11 @@ export default function CompanyPaymentsPage() {
       });
 
       const [{ data: settingData }, { data: depositData }, { data: invoiceData }, { data: collectionData }, { data: notificationData }] = await Promise.all([
-        supabase.from('incubation_fee_settings').select('*').eq('company_id', appData.id).maybeSingle(),
-        supabase.from('company_deposits').select('*').eq('company_id', appData.id).maybeSingle(),
-        supabase.from('incubation_fee_invoices').select('*').eq('company_id', appData.id).order('billing_month', { ascending: false }),
-        supabase.from('fee_collections').select('*, incubation_fee_invoices(invoice_number, billing_month)').eq('company_id', appData.id).order('collection_date', { ascending: false }),
-        supabase.from('notifications').select('*').or(`company_id.eq.${appData.id},recipient_type.eq.all`).order('sent_at', { ascending: false }),
+        database.from('incubation_fee_settings').select('*').eq('company_id', appData.id).maybeSingle(),
+        database.from('company_deposits').select('*').eq('company_id', appData.id).maybeSingle(),
+        database.from('incubation_fee_invoices').select('*').eq('company_id', appData.id).order('billing_month', { ascending: false }),
+        database.from('fee_collections').select('*, incubation_fee_invoices(invoice_number, billing_month)').eq('company_id', appData.id).order('collection_date', { ascending: false }),
+        database.from('notifications').select('*').or(`company_id.eq.${appData.id},recipient_type.eq.all`).order('sent_at', { ascending: false }),
       ]);
 
       setSetting((settingData || null) as FeeSetting | null);
@@ -176,7 +176,7 @@ export default function CompanyPaymentsPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 

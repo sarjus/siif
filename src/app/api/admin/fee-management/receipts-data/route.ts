@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
-    const { data: collections, error } = await supabaseAdmin
+    const { data: collections, error } = await databaseAdmin
       .from('fee_collections')
       .select('*, applications(business_name, email), incubation_fee_invoices(invoice_number, billing_month)')
       .neq('status', 'cancelled')

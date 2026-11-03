@@ -2,8 +2,8 @@
 
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { database } from '@/lib/database';
+import type { AppUser } from '@/lib/auth-types';
 
 interface ApprovedCompany {
   id: string;
@@ -32,7 +32,7 @@ function LoginContent() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const findApprovedCompany = async (userEmail: string): Promise<ApprovedCompany | null> => {
-    const { data, error: queryError } = await supabase
+    const { data, error: queryError } = await database
       .from('applications')
       .select('id')
       .ilike('email', userEmail)
@@ -45,19 +45,19 @@ function LoginContent() {
     return data || null;
   };
 
-  const routeByRole = async (user: User) => {
+  const routeByRole = async (user: AppUser) => {
     const normalizedEmail = (user.email || '').trim().toLowerCase();
     const role = String(user.user_metadata?.role || '');
 
     if (role === 'company') {
       if (!normalizedEmail) {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         throw new Error('Company account email is missing. Please contact admin.');
       }
 
       const approvedCompany = await findApprovedCompany(normalizedEmail);
       if (!approvedCompany) {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         throw new Error('Access denied. Company login is available only after approval.');
       }
 
@@ -72,15 +72,15 @@ function LoginContent() {
       return;
     }
 
-    const { data: reviewerRecord } = await supabase
-      .from('reviewers')
-      .select('id, is_active')
-      .eq('user_id', user.id)
-      .maybeSingle<ReviewerRecord>();
-
-    if (reviewerRecord) {
-      if (!reviewerRecord.is_active) {
-        await supabase.auth.signOut();
+    if (role === 'reviewer') {
+      const { data: reviewerRecord, error } = await database
+        .from('reviewers')
+        .select('id, is_active')
+        .eq('user_id', user.id)
+        .maybeSingle<ReviewerRecord>();
+      if (error) throw error;
+      if (!reviewerRecord || !reviewerRecord.is_active) {
+        await database.auth.signOut();
         throw new Error('Your reviewer account has been deactivated. Please contact the admin.');
       }
       router.push('/reviewer/dashboard');
@@ -88,17 +88,27 @@ function LoginContent() {
       return;
     }
 
+    if (role !== 'admin') {
+      await database.auth.signOut();
+      throw new Error('This account does not have portal access.');
+    }
     router.push('/admin/dashboard');
     router.refresh();
   };
 
   useEffect(() => {
+    if (searchParams.get('recovery')) {
+      setResetMode('email_recovery');
+      setViewMode('login');
+      setNotice('Set your new password to complete recovery.');
+      return;
+    }
     const verifyCurrentSession = async () => {
       setError(null);
       setNotice(null);
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await database.auth.getSession();
 
       if (!session?.user) return;
       await routeByRole(session.user);
@@ -106,7 +116,7 @@ function LoginContent() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = database.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setResetMode('email_recovery');
         setAccountEmail(session?.user?.email || null);
@@ -134,7 +144,7 @@ function LoginContent() {
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await database.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
@@ -168,7 +178,7 @@ function LoginContent() {
       const redirectTo =
         typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
 
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      const { error: resetError } = await database.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       });
 
@@ -201,22 +211,37 @@ function LoginContent() {
 
     setLoading(true);
     try {
+      const recoveryToken = searchParams.get('recovery');
+      if (recoveryToken) {
+        const response = await fetch('/api/auth/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: newPassword, recoveryToken }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message || 'Failed to reset password.');
+        setResetMode(null);
+        setNotice('Password updated successfully. Please sign in.');
+        router.replace('/login');
+        return;
+      }
+
       const {
         data: { user },
         error: userError,
-      } = await supabase.auth.getUser();
+      } = await database.auth.getUser();
 
       if (userError || !user) {
         throw new Error('Session expired. Please login again.');
       }
 
       if (resetMode === 'company_first_login' && String(user.user_metadata?.role || '') !== 'company') {
-        await supabase.auth.signOut();
+        await database.auth.signOut();
         throw new Error('Password reset is only required for company users.');
       }
 
       const metadata = user.user_metadata || {};
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error: updateError } = await database.auth.updateUser({
         password: newPassword,
         data: {
           ...metadata,

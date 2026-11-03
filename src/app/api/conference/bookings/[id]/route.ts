@@ -2,7 +2,7 @@
  * PATCH /api/conference/bookings/[id]  — Admin approves/rejects, company cancels
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
 
 export async function PATCH(
   request: NextRequest,
@@ -23,11 +23,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
     const isAdmin = await isEffectiveAdminUser(user);
 
     // Load booking
-    const { data: booking } = await supabase
+    const { data: booking } = await database
       .from('conference_bookings')
       .select('*')
       .eq('id', id)
@@ -38,7 +38,7 @@ export async function PATCH(
     if (action === 'cancel') {
       // Company can cancel their own pending booking
       if (!isAdmin) {
-        const { data: app } = await supabase
+        const { data: app } = await database
           .from('applications')
           .select('id')
           .eq('id', booking.company_id)
@@ -49,7 +49,7 @@ export async function PATCH(
       if (booking.status !== 'pending' && booking.status !== 'approved') {
         return NextResponse.json({ error: 'Only pending or approved bookings can be cancelled.' }, { status: 400 });
       }
-      await supabase.from('conference_bookings').update({ status: 'cancelled' }).eq('id', id);
+      await database.from('conference_bookings').update({ status: 'cancelled' }).eq('id', id);
       return NextResponse.json({ success: true });
     }
 
@@ -62,7 +62,7 @@ export async function PATCH(
 
     if (action === 'approve') {
       // Re-check conflicts before approving
-      const { data: conflicts } = await supabase
+      const { data: conflicts } = await database
         .from('conference_bookings')
         .select('id, title')
         .eq('status', 'approved')
@@ -76,13 +76,13 @@ export async function PATCH(
         }, { status: 409 });
       }
 
-      await supabase.from('conference_bookings').update({
+      await database.from('conference_bookings').update({
         status: 'approved',
         reviewed_by: user.email,
         reviewed_at: new Date().toISOString(),
       }).eq('id', id);
     } else {
-      await supabase.from('conference_bookings').update({
+      await database.from('conference_bookings').update({
         status: 'rejected',
         rejection_reason: rejectionReason || null,
         reviewed_by: user.email,

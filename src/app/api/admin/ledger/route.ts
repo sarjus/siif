@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 // GET — list entries with optional date range filter
 export async function GET(request: NextRequest) {
@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
-    const supabase = createServiceRoleClient();
-    let query = supabase
+    const database = createDatabaseClient();
+    let query = database
       .from('siif_ledger')
       .select('*')
       .order('entry_date', { ascending: true })
@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Either debit or credit must be greater than zero.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const database = createDatabaseClient();
+    const { data, error } = await database
       .from('siif_ledger')
       .insert({
         entry_date: entryDate,
@@ -93,8 +93,8 @@ export async function DELETE(request: NextRequest) {
     const { entryId } = await request.json() as { entryId?: string };
     if (!entryId) return NextResponse.json({ error: 'Entry ID is required.' }, { status: 400 });
 
-    const supabase = createServiceRoleClient();
-    const { error } = await supabase.from('siif_ledger').delete().eq('id', entryId);
+    const database = createDatabaseClient();
+    const { error } = await database.from('siif_ledger').delete().eq('id', entryId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ success: true });
   } catch (err) {

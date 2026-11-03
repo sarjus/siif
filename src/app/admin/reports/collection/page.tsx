@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { downloadReportPdf, exportCsv, formatCurrency } from '@/lib/fee-management';
@@ -35,7 +35,7 @@ export default function CollectionReportPage() {
 
   const handleExportPdf = async () => { const logo = await loadLogoForPdf(); downloadReportPdf({ title: 'Collection Report', headers: ['Company', 'Type', 'Date', 'Amount', 'Mode'], rows, logoDataUrl: logo }); };
   const handleExportCsv = () => exportCsv('collection-report.csv', ['Company', 'Type', 'Date', 'Amount', 'Mode'], rows);
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 

@@ -3,24 +3,24 @@
  * POST /api/conference/bookings  — Company requests a new slot
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getRequestUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
     const isAdmin = await isEffectiveAdminUser(user);
 
-    let query = supabase
+    let query = database
       .from('conference_bookings')
       .select('*, applications(business_name, email)')
       .order('start_time', { ascending: true });
 
     if (!isAdmin) {
       // Companies see all approved + their own bookings of any status
-      const { data: app } = await supabase
+      const { data: app } = await database
         .from('applications')
         .select('id')
         .ilike('email', user.email || '')
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
 
       // Fetch approved from everyone + all statuses for own company
       const [approvedRes, ownRes] = await Promise.all([
-        supabase.from('conference_bookings')
+        database.from('conference_bookings')
           .select('*, applications(business_name, email)')
           .eq('status', 'approved')
           .order('start_time', { ascending: true }),
-        supabase.from('conference_bookings')
+        database.from('conference_bookings')
           .select('*, applications(business_name, email)')
           .eq('company_id', app.id)
           .neq('status', 'approved')  // avoid duplicates
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot book a slot in the past.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Verify company ownership
-    const { data: app } = await supabase
+    const { data: app } = await database
       .from('applications')
       .select('id')
       .eq('id', companyId)
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (!app) return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
 
     // Conflict check — approved bookings that overlap this slot
-    const { data: conflicts } = await supabase
+    const { data: conflicts } = await database
       .from('conference_bookings')
       .select('id, title, start_time, end_time')
       .eq('status', 'approved')
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('conference_bookings')
       .insert({
         company_id: companyId,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
 import { nextInvoiceNumber } from '@/lib/sequential-numbers';
 
 export async function POST(request: NextRequest) {
@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'fromMonth and toMonth are required (YYYY-MM-DD format).' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Fetch all invoices with the old billing month (non-void)
-    const { data: invoices, error: fetchError } = await supabaseAdmin
+    const { data: invoices, error: fetchError } = await databaseAdmin
       .from('incubation_fee_invoices')
       .select('id, company_id, due_date')
       .eq('billing_month', fromMonth)
@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
       // Parse due_date components to preserve the due day in the new month
       const [, , dueDay] = invoice.due_date.slice(0, 10).split('-').map(Number);
       const newDueDateStr = `${toYear}-${String(toMon).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}`;
-      const newInvoiceNumber = await nextInvoiceNumber(supabaseAdmin, toYear);
+      const newInvoiceNumber = await nextInvoiceNumber(databaseAdmin, toYear);
 
       // Check if target billing_month already exists for this company (to avoid unique constraint violation)
-      const { data: conflict } = await supabaseAdmin
+      const { data: conflict } = await databaseAdmin
         .from('incubation_fee_invoices')
         .select('id')
         .eq('company_id', invoice.company_id)
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
       if (conflict) {
         // Target month invoice already exists — delete the old May one instead
-        await supabaseAdmin
+        await databaseAdmin
           .from('incubation_fee_invoices')
           .update({ status: 'void', updated_at: new Date().toISOString() })
           .eq('id', invoice.id);
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .update({
           billing_month: toMonth,

@@ -1,7 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { computeInvoiceStatus } from '@/lib/fee-management';
-import { getCompanyApplicationIdForUser, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
+import { createDatabaseClient, getCompanyApplicationIdForUser, getRequestUser, isEffectiveAdminUser } from '@/lib/server-auth';
 import { nextInvoiceNumber } from '@/lib/sequential-numbers';
 
 type FeeSetting = {
@@ -25,20 +24,6 @@ type InvoiceRecord = {
   status: 'pending' | 'partially_paid' | 'paid' | 'overdue' | 'void';
 };
 
-const getAdminClient = () => {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-  if (!serviceRoleKey || !supabaseUrl) {
-    throw new Error('Missing Supabase service role configuration.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-};
-
-
 const toDateOnly = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -48,7 +33,7 @@ const toDateOnly = (date: Date) => {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabaseAdmin = getAdminClient();
+    const databaseAdmin = createDatabaseClient();
     const body = await request.json().catch(() => ({}));
     const companyId = typeof body?.companyId === 'string' ? body.companyId : null;
     const user = await getRequestUser(request);
@@ -64,13 +49,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Company ID is required.' }, { status: 400 });
       }
 
-      const authorizedCompanyId = await getCompanyApplicationIdForUser(supabaseAdmin, user, companyId);
+      const authorizedCompanyId = await getCompanyApplicationIdForUser(databaseAdmin, user, companyId);
       if (!authorizedCompanyId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
-    let settingsQuery = supabaseAdmin
+    let settingsQuery = databaseAdmin
       .from('incubation_fee_settings')
       .select('id, company_id, monthly_fee, start_date, due_day, grace_period_days, status')
       .eq('status', 'active');
@@ -83,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (settingsError) throw settingsError;
 
     // Load existing invoices to check for duplicates
-    const { data: existingInvoices, error: invoicesError } = await supabaseAdmin
+    const { data: existingInvoices, error: invoicesError } = await databaseAdmin
       .from('incubation_fee_invoices')
       .select('id, company_id, invoice_number, billing_month, amount, amount_paid, due_date, status');
     if (invoicesError) throw invoicesError;
@@ -121,7 +106,7 @@ export async function POST(request: NextRequest) {
 
       if (!existing) {
         // No invoice for this month yet — create it
-        const invoiceNumber = await nextInvoiceNumber(supabaseAdmin, currentMonth.getFullYear());
+        const invoiceNumber = await nextInvoiceNumber(databaseAdmin, currentMonth.getFullYear());
         createdInvoices.push({
           company_id: setting.company_id,
           invoice_number: invoiceNumber,
@@ -156,14 +141,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (createdInvoices.length > 0) {
-      const { error: createError } = await supabaseAdmin
+      const { error: createError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .insert(createdInvoices);
       if (createError) throw createError;
     }
 
     for (const invoice of updatedInvoices) {
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .update({ status: invoice.status })
         .eq('id', invoice.id);

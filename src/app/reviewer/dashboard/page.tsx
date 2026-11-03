@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { database, getSafeSession } from '@/lib/database';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 
@@ -47,7 +47,7 @@ export default function ReviewerDashboard() {
       }
 
       // Get reviewer record for this user
-      const { data: reviewerData, error: rvErr } = await supabase
+      const { data: reviewerData, error: rvErr } = await database
         .from('reviewers')
         .select('id, name')
         .eq('user_id', session.user.id)
@@ -61,7 +61,7 @@ export default function ReviewerDashboard() {
 
       setReviewerName(reviewerData.name);
 
-      const { data: assigns, error: aErr } = await supabase
+      const { data: assigns, error: aErr } = await database
         .from('application_assignments')
         .select(
           '*, applications(business_name, lead_name, email, status, submitted_at, stage_of_startup, sector_domain)'
@@ -83,7 +83,7 @@ export default function ReviewerDashboard() {
   }, [fetchData]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 

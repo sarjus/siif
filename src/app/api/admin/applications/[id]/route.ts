@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function DELETE(
   request: NextRequest,
@@ -14,10 +14,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Application ID is required.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Verify the application exists before deleting
-    const { data: existing, error: fetchError } = await supabaseAdmin
+    const { data: existing, error: fetchError } = await databaseAdmin
       .from('applications')
       .select('id, business_name, status')
       .eq('id', applicationId)
@@ -33,7 +33,7 @@ export async function DELETE(
 
     // Delete the application — cascades to fee_settings, invoices, deposits,
     // fee_collections, application_references, application_assignments, etc.
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await databaseAdmin
       .from('applications')
       .delete()
       .eq('id', applicationId);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser } from '@/lib/server-auth';
 
 // Company submits payment proof for admin verification
 export async function POST(request: NextRequest) {
@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company, amount, payment mode, and date are required.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Verify this company belongs to the authenticated user
-    const { data: application, error: appError } = await supabaseAdmin
+    const { data: application, error: appError } = await databaseAdmin
       .from('applications')
       .select('id, email, business_name')
       .eq('id', companyId)
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
     }
 
-    const { data, error: insertError } = await supabaseAdmin
+    const { data, error: insertError } = await databaseAdmin
       .from('company_payment_submissions')
       .insert({
         company_id: companyId,
@@ -83,10 +83,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company ID is required.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     // Verify ownership
-    const { data: application } = await supabaseAdmin
+    const { data: application } = await databaseAdmin
       .from('applications')
       .select('email')
       .eq('id', companyId)
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 403 });
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await databaseAdmin
       .from('company_payment_submissions')
       .select('*, incubation_fee_invoices(invoice_number, billing_month)')
       .eq('company_id', companyId)

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     const [
       { data: invoices, error: invoicesError },
@@ -15,25 +15,25 @@ export async function GET(request: NextRequest) {
       { data: allCollections, error: allCollectionsError },
       { data: companies, error: companiesError },
     ] = await Promise.all([
-      supabaseAdmin
+      databaseAdmin
         .from('incubation_fee_invoices')
         .select('status, amount, due_date, amount_paid, company_id, billing_month')
         .neq('status', 'void'),
-      supabaseAdmin
+      databaseAdmin
         .from('company_deposits')
         .select('status, amount_collected, balance_amount, deposit_amount'),
-      supabaseAdmin
+      databaseAdmin
         .from('fee_collections')
         .select('amount_collected, created_at, collection_type')
         .eq('status', 'recorded')
         .order('created_at', { ascending: false })
         .limit(20),
-      supabaseAdmin
+      databaseAdmin
         .from('fee_collections')
         .select('amount_collected, created_at, collection_type')
         .eq('status', 'recorded')
         .order('created_at', { ascending: true }),
-      supabaseAdmin
+      databaseAdmin
         .from('applications')
         .select('id, business_name')
         .eq('status', 'approved'),

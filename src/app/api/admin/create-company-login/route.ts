@@ -1,39 +1,16 @@
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
+import { randomInt } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/server-auth';
+import { createMysqlClient } from '@/lib/mysql';
+import {
+  createUserAccount,
+  getAccountByEmail,
+  recreateUserAccount,
+  requireAdmin,
+} from '@/lib/server-auth';
 
 const generateTemporaryPassword = () => {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
-};
-
-const isAlreadyExistsError = (message: string) => {
-  const normalized = message.toLowerCase();
-  return normalized.includes('already') || normalized.includes('registered');
-};
-
-const findAuthUserByEmail = async (
-  supabaseAdmin: SupabaseClient,
-  normalizedEmail: string
-): Promise<User | null> => {
-  let page = 1;
-  const perPage = 200;
-
-  while (page <= 10) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
-
-    const match = (data.users || []).find(
-      (user) => (user.email || '').trim().toLowerCase() === normalizedEmail
-    );
-
-    if (match) return match;
-    if (!data.nextPage) break;
-    page = data.nextPage;
-  }
-
-  return null;
+  return Array.from({ length: 18 }, () => alphabet[randomInt(alphabet.length)]).join('');
 };
 
 export async function POST(request: NextRequest) {
@@ -41,41 +18,28 @@ export async function POST(request: NextRequest) {
     const { response } = await requireAdmin(request);
     if (response) return response;
 
-    const body = await request.json();
-    const { applicationId, email, leadName, businessName, forceRecreate } = body as {
+    const body = await request.json() as {
       applicationId?: string;
       email?: string;
       leadName?: string;
       businessName?: string;
       forceRecreate?: boolean;
     };
+    const { applicationId, email, leadName, businessName, forceRecreate } = body;
 
-    if (!applicationId || !email) {
+    if (!applicationId || !email || typeof email !== 'string') {
       return NextResponse.json(
         { error: 'applicationId and email are required' },
         { status: 400 }
       );
     }
 
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-    if (!serviceRoleKey || !supabaseUrl) {
-      return NextResponse.json(
-        { error: 'Server configuration error: missing service role key' },
-        { status: 500 }
-      );
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
     const normalizedEmail = email.trim().toLowerCase();
-    const temporaryPassword = generateTemporaryPassword();
-
-    // Only approved applications should get company portal access.
-    const { data: application, error: applicationError } = await supabaseAdmin
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 });
+    }
+    const database = createMysqlClient();
+    const { data: application, error: applicationError } = await database
       .from('applications')
       .select('id, email, status')
       .eq('id', applicationId)
@@ -84,18 +48,15 @@ export async function POST(request: NextRequest) {
     if (applicationError) {
       return NextResponse.json({ error: applicationError.message }, { status: 400 });
     }
-
     if (!application) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
-
     if ((application.status || '').toLowerCase() !== 'approved') {
       return NextResponse.json(
         { error: 'Company login can be created only for approved applications' },
         { status: 400 }
       );
     }
-
     if ((application.email || '').trim().toLowerCase() !== normalizedEmail) {
       return NextResponse.json(
         { error: 'Application email mismatch. Use the same email as the application.' },
@@ -103,90 +64,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
-      email: normalizedEmail,
-      password: temporaryPassword,
-      email_confirm: true,
-      user_metadata: {
-        role: 'company',
-        application_id: applicationId,
-        business_name: businessName || null,
-        lead_name: leadName || null,
-        must_reset_password: true,
-      },
-    });
+    const metadata = {
+      role: 'company',
+      application_id: applicationId,
+      business_name: businessName || null,
+      lead_name: leadName || null,
+    };
+    const temporaryPassword = generateTemporaryPassword();
+    const existingAccount = await getAccountByEmail(normalizedEmail);
 
-    if (userError) {
-      if (isAlreadyExistsError(userError.message || '')) {
-        if (!forceRecreate) {
-        return NextResponse.json(
-          {
-            error:
-              'A login already exists for this email. If needed, reset the password in Supabase Auth users.',
-          },
-          { status: 409 }
-        );
-        }
+    if (existingAccount && existingAccount.role !== 'company') {
+      return NextResponse.json(
+        { error: 'Cannot create a company login because this email belongs to a different account type.' },
+        { status: 409 }
+      );
+    }
+    if (existingAccount && forceRecreate !== true) {
+      return NextResponse.json(
+        { error: 'A login already exists for this email. Recreate it to issue a new temporary password.' },
+        { status: 409 }
+      );
+    }
 
-        const existingUser = await findAuthUserByEmail(supabaseAdmin, normalizedEmail);
-
-        if (!existingUser) {
-          return NextResponse.json(
-            { error: 'Existing user could not be located for recreation.' },
-            { status: 404 }
-          );
-        }
-
-        const existingRole = String(existingUser.user_metadata?.role || '');
-        if (existingRole && existingRole !== 'company') {
-          return NextResponse.json(
-            {
-              error:
-                'Cannot recreate login because this email belongs to a non-company account.',
-            },
-            { status: 409 }
-          );
-        }
-
-        const { data: updatedData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-          existingUser.id,
-          {
-            password: temporaryPassword,
-            email_confirm: true,
-            user_metadata: {
-              ...(existingUser.user_metadata || {}),
-              role: 'company',
-              application_id: applicationId,
-              business_name: businessName || null,
-              lead_name: leadName || null,
-              must_reset_password: true,
-              company_login_recreated_at: new Date().toISOString(),
-            },
-          }
-        );
-
-        if (updateError) {
-          return NextResponse.json({ error: updateError.message }, { status: 400 });
-        }
-
-        return NextResponse.json({
-          success: true,
-          recreated: true,
-          userId: updatedData.user.id,
-          defaultPassword: temporaryPassword,
+    let userId: string;
+    if (existingAccount) {
+      await recreateUserAccount({
+          id: existingAccount.id,
+          email: normalizedEmail,
+          password: temporaryPassword,
+          role: 'company',
+          metadata,
+      });
+      userId = existingAccount.id;
+    } else {
+      userId = await createUserAccount({
+          email: normalizedEmail,
+          password: temporaryPassword,
+          role: 'company',
+          metadata,
+          mustResetPassword: true,
         });
-      }
-
-      return NextResponse.json({ error: userError.message }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
-      recreated: false,
-      userId: userData.user.id,
+      recreated: Boolean(existingAccount),
+      userId,
       defaultPassword: temporaryPassword,
     });
-  } catch {
+  } catch (error) {
+    console.error('Failed to create company login:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { computeInvoiceStatus } from '@/lib/fee-management';
 import { nextReceiptNumber } from '@/lib/sequential-numbers';
 
@@ -8,23 +8,23 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAdmin(request);
     if (!user) return response!;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     const [companiesRes, invoicesRes, settingsRes, depositsRes] = await Promise.all([
-      supabaseAdmin
+      databaseAdmin
         .from('applications')
         .select('id, business_name, email')
         .eq('status', 'approved')
         .order('business_name', { ascending: true }),
-      supabaseAdmin
+      databaseAdmin
         .from('incubation_fee_invoices')
         .select('*, applications(business_name, email)')
         .in('status', ['pending', 'partially_paid', 'overdue'])
         .order('due_date', { ascending: true }),
-      supabaseAdmin
+      databaseAdmin
         .from('incubation_fee_settings')
         .select('*'),
-      supabaseAdmin
+      databaseAdmin
         .from('company_deposits')
         .select('*'),
     ]);
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Amount must be greater than zero.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
     let resolvedInvoiceId: string | null = null;
     let invoiceNumber: string | null = null;
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     if (collectionType === 'monthly_fee' && invoiceId) {
       // Fetch invoice and its company's grace_period_days separately
       // (avoid !inner join which returns null if fee_settings row is missing)
-      const { data: invoice, error: invError } = await supabaseAdmin
+      const { data: invoice, error: invError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .select('*')
         .eq('id', invoiceId)
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Fetch grace_period_days from fee settings separately
-      const { data: feeSetting } = await supabaseAdmin
+      const { data: feeSetting } = await databaseAdmin
         .from('incubation_fee_settings')
         .select('grace_period_days')
         .eq('company_id', invoice.company_id)
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         gracePeriodDays,
       });
 
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from('incubation_fee_invoices')
         .update({ amount_paid: nextPaid, status: nextStatus })
         .eq('id', invoiceId);
@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const receiptNumber = await nextReceiptNumber(supabaseAdmin);
-    const { error: insertError } = await supabaseAdmin.from('fee_collections').insert({
+    const receiptNumber = await nextReceiptNumber(databaseAdmin);
+    const { error: insertError } = await databaseAdmin.from('fee_collections').insert({
       company_id: companyId,
       receipt_number: receiptNumber,
       collection_type: collectionType,
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch company name for receipt
-    const { data: appData } = await supabaseAdmin
+    const { data: appData } = await databaseAdmin
       .from('applications')
       .select('business_name, email')
       .eq('id', companyId)

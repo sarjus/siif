@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
 import { Card } from '@/components/ui/card';
 import { downloadReceiptPdf, formatBillingMonth, formatCurrency } from '@/lib/fee-management';
@@ -92,7 +92,7 @@ export default function ReceiptsPage() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 

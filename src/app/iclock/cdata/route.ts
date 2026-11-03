@@ -23,7 +23,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/server-auth';
+import { createDatabaseClient } from '@/lib/server-auth';
 
 // Optional shared secret — set ADMS_SECRET in .env.local and on the device
 const ADMS_SECRET = process.env.ADMS_SECRET || '';
@@ -123,11 +123,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const supabase = createServiceRoleClient();
+  const database = createDatabaseClient();
 
   // Update last_seen on every heartbeat.
   // First try to insert (new device), then update if already exists.
-  const { data: existingDevice } = await supabase
+  const { data: existingDevice } = await database
     .from('attendance_devices')
     .select('id')
     .eq('serial_no', sn)
@@ -135,13 +135,13 @@ export async function GET(request: NextRequest) {
 
   if (existingDevice) {
     // Device already registered — just update last_seen
-    await supabase
+    await database
       .from('attendance_devices')
       .update({ last_seen: new Date().toISOString() })
       .eq('serial_no', sn);
   } else {
     // First contact — auto-register the device
-    await supabase
+    await database
       .from('attendance_devices')
       .insert({ serial_no: sn, last_seen: new Date().toISOString(), name: sn });
   }
@@ -176,10 +176,10 @@ export async function POST(request: NextRequest) {
 
   if (!sn) return new NextResponse('ERROR: Missing SN', { status: 400 });
 
-  const supabase = createServiceRoleClient();
+  const database = createDatabaseClient();
 
   // Update last_seen on every push
-  await supabase
+  await database
     .from('attendance_devices')
     .update({ last_seen: new Date().toISOString() })
     .eq('serial_no', sn);
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Get the device UUID for FK
-  const { data: device } = await supabase
+  const { data: device } = await database
     .from('attendance_devices')
     .select('id, enabled')
     .eq('serial_no', sn)
@@ -232,14 +232,14 @@ export async function POST(request: NextRequest) {
     if (!parsed) { skipped++; continue; }
 
     // Look up user mapping to link to an incubatee
-    const { data: mapping } = await supabase
+    const { data: mapping } = await database
       .from('attendance_user_mapping')
       .select('incubatee_id')
       .eq('device_sn', sn)
       .eq('pin', parsed.pin)
       .maybeSingle();
 
-    const { error } = await supabase
+    const { error } = await database
       .from('attendance_logs')
       .insert({
         device_id: device?.id || null,

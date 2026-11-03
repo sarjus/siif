@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
 
-    const supabaseAdmin = createServiceRoleClient();
-    let query = supabaseAdmin
+    const databaseAdmin = createDatabaseClient();
+    let query = databaseAdmin
       .from('fee_revision_history')
       .select('*, applications(business_name, email)')
       .order('effective_from', { ascending: false })

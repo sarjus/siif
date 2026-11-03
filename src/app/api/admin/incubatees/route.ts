@@ -4,7 +4,7 @@
  * PATCH /api/admin/incubatees            — edit incubatee_id of an approved entry
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, requireAdmin } from '@/lib/server-auth';
+import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { nextIncubateeId } from '@/lib/sequential-numbers';
 import { signPhotoUrl } from '@/lib/photo-token';
 
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    const supabase = createServiceRoleClient();
-    let query = supabase
+    const database = createDatabaseClient();
+    let query = database
       .from('incubatees')
       .select('*, applications(business_name, email)')
       .order('created_at', { ascending: false });
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const incubatees = data || [];
 
     // Attach a server-signed proxy URL for each photo.
-    // Supabase signed URLs are NOT sent to the browser — only HMAC-protected
+    // Private storage URLs are NOT sent to the browser — only HMAC-protected
     // proxy URLs that our own route validates before streaming the image.
     const result = incubatees.map((i) => ({
       ...i,
@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'action must be approve or reject.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
-    const { data: existing } = await supabase
+    const { data: existing } = await database
       .from('incubatees').select('id, status').eq('id', incubateeId).maybeSingle();
 
     if (!existing) return NextResponse.json({ error: 'Incubatee not found.' }, { status: 404 });
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'reject') {
-      const { error } = await supabase.from('incubatees').update({
+      const { error } = await database.from('incubatees').update({
         status: 'rejected',
         rejection_reason: rejectionReason || null,
         reviewed_by: user.email,
@@ -87,9 +87,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Approve: generate sequential incubatee ID (26SIIF001)
-    const newId = await nextIncubateeId(supabase);
+    const newId = await nextIncubateeId(database);
 
-    const { data, error } = await supabase.from('incubatees').update({
+    const { data, error } = await database.from('incubatees').update({
       status: 'approved',
       incubatee_id: newId,
       reviewed_by: user.email,
@@ -129,10 +129,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const supabase = createServiceRoleClient();
+    const database = createDatabaseClient();
 
     // Only approved entries can have their ID edited
-    const { data: existing } = await supabase
+    const { data: existing } = await database
       .from('incubatees')
       .select('id, status, incubatee_id')
       .eq('id', incubateeId)
@@ -147,7 +147,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check uniqueness — make sure the new ID isn't already in use by another row
-    const { data: conflict } = await supabase
+    const { data: conflict } = await database
       .from('incubatees')
       .select('id')
       .eq('incubatee_id', newIncubateeId.trim())
@@ -161,7 +161,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from('incubatees')
       .update({ incubatee_id: newIncubateeId.trim() })
       .eq('id', incubateeId)

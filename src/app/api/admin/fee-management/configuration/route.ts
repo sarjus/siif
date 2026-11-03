@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser } from '@/lib/server-auth';
 
 type SaveConfigurationBody = {
   companyId?: string;
@@ -49,19 +49,19 @@ export async function GET(request: NextRequest) {
     const { response } = await getAuthorizedUser(request);
     if (response) return response;
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
     const [
       { data: apps, error: appError },
       { data: settingsData, error: settingsError },
       { data: depositsData, error: depositsError },
     ] = await Promise.all([
-      supabaseAdmin
+      databaseAdmin
         .from('applications')
         .select('id, business_name, lead_name, email, status')
         .eq('status', 'approved')
         .order('business_name', { ascending: true }),
-      supabaseAdmin.from('incubation_fee_settings').select('*').order('created_at', { ascending: false }),
-      supabaseAdmin.from('company_deposits').select('*').order('created_at', { ascending: false }),
+      databaseAdmin.from('incubation_fee_settings').select('*').order('created_at', { ascending: false }),
+      databaseAdmin.from('company_deposits').select('*').order('created_at', { ascending: false }),
     ]);
 
     if (appError) return NextResponse.json({ error: appError.message }, { status: 400 });
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { response } = await getAuthorizedUser(request);
+    const { user, response } = await getAuthorizedUser(request);
     if (response) return response;
 
     const body = (await request.json()) as SaveConfigurationBody;
@@ -136,9 +136,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan status.' }, { status: 400 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
 
-    const { data: company, error: companyError } = await supabaseAdmin
+    const { data: company, error: companyError } = await databaseAdmin
       .from('applications')
       .select('id, status')
       .eq('id', companyId)
@@ -156,13 +156,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current fee before saving (for revision history)
-    const { data: existingSetting } = await supabaseAdmin
+    const { data: existingSetting } = await databaseAdmin
       .from('incubation_fee_settings')
       .select('monthly_fee')
       .eq('company_id', companyId)
       .maybeSingle();
 
-    const { error: settingsError } = await supabaseAdmin
+    const { error: settingsError } = await databaseAdmin
       .from('incubation_fee_settings')
       .upsert(
         {
@@ -186,18 +186,18 @@ export async function POST(request: NextRequest) {
     // Record fee revision if the monthly fee changed and effectiveFrom is provided
     const oldFee = Number(existingSetting?.monthly_fee || 0);
     if (existingSetting && oldFee !== monthlyFee && effectiveFrom) {
-      await supabaseAdmin.from('fee_revision_history').insert({
+      await databaseAdmin.from('fee_revision_history').insert({
         company_id: companyId,
         old_fee: oldFee,
         new_fee: monthlyFee,
         effective_from: effectiveFrom,
-        changed_by: (await supabaseAdmin.auth.getUser()).data.user?.email || 'Admin',
+        changed_by: user?.email || 'Admin',
         notes: revisionNotes,
       });
 
       // Update any pending/overdue invoices from the effective month onwards
       // to reflect the new fee amount
-      const { data: futureInvoices } = await supabaseAdmin
+      const { data: futureInvoices } = await databaseAdmin
         .from('incubation_fee_invoices')
         .select('id, billing_month, amount_paid, status')
         .eq('company_id', companyId)
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       for (const inv of futureInvoices || []) {
         if (Number(inv.amount_paid || 0) === 0) {
           // Not yet paid — update the amount
-          await supabaseAdmin
+          await databaseAdmin
             .from('incubation_fee_invoices')
             .update({ amount: monthlyFee })
             .eq('id', inv.id);
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: existingDeposit, error: existingDepositError } = await supabaseAdmin
+    const { data: existingDeposit, error: existingDepositError } = await databaseAdmin
       .from('company_deposits')
       .select('amount_collected, amount_refunded, collection_date, refund_date, remarks')
       .eq('company_id', companyId)
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     const refunded = Number(existingDeposit?.amount_refunded || 0);
     const balance = Math.max(refundableDeposit - collected + refunded, 0);
 
-    const { error: depositError } = await supabaseAdmin
+    const { error: depositError } = await databaseAdmin
       .from('company_deposits')
       .upsert(
         {

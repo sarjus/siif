@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase, getSafeSession, getAuthHeaders } from '@/lib/supabase';
+import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,13 +37,13 @@ export default function ReviewersPage() {
     try {
       setLoading(true);
 
-      const { data: reviewerList, error: rErr } = await supabase
+      const { data: reviewerList, error: rErr } = await database
         .from('reviewers')
         .select('*')
         .order('created_at', { ascending: false });
       if (rErr) throw rErr;
 
-      const { data: counts } = await supabase
+      const { data: counts } = await database
         .from('application_assignments')
         .select('reviewer_id, review_status');
 
@@ -80,7 +80,7 @@ export default function ReviewersPage() {
   }, [router, fetchReviewers]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await database.auth.signOut();
     router.push('/login');
   };
 
@@ -110,7 +110,7 @@ export default function ReviewersPage() {
   };
 
   const handleToggleActive = async (id: string, current: boolean) => {
-    await supabase.from('reviewers').update({ is_active: !current }).eq('id', id);
+    await database.from('reviewers').update({ is_active: !current }).eq('id', id);
     await fetchReviewers();
   };
 

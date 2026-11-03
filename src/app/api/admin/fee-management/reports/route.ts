@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient, getRequestUser } from '@/lib/server-auth';
+import { createDatabaseClient, getRequestUser } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,27 +13,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company accounts cannot view admin reports.' }, { status: 403 });
     }
 
-    const supabaseAdmin = createServiceRoleClient();
+    const databaseAdmin = createDatabaseClient();
     const [
       { data: collectionsData, error: collectionsError },
       { data: invoiceData, error: invoicesError },
       { data: depositData, error: depositsError },
       { data: ledgerData, error: ledgerError },
     ] = await Promise.all([
-      supabaseAdmin
+      databaseAdmin
         .from('fee_collections')
         .select('*, applications(business_name)')
         .order('collection_date', { ascending: false }),
-      supabaseAdmin
+      databaseAdmin
         .from('incubation_fee_invoices')
         .select('*, applications(business_name)')
         .neq('status', 'void')
         .order('billing_month', { ascending: false }),
-      supabaseAdmin
+      databaseAdmin
         .from('company_deposits')
         .select('*, applications(business_name)')
         .order('created_at', { ascending: false }),
-      supabaseAdmin
+      databaseAdmin
         .from('siif_ledger')
         .select('*')
         .order('entry_date', { ascending: true })

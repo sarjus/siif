@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, getSafeSession } from '@/lib/supabase';
+import { database, getSafeSession } from '@/lib/database';
 import { useRouter } from 'next/navigation';
 import AdminShell from '@/components/AdminShell';
 import {
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     load();
   }, [router]);
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/login'); };
+  const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
