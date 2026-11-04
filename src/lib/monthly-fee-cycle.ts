@@ -156,14 +156,17 @@ export async function runMonthlyFeeCycle(
   const companyIds = eligibleSettings.map((setting) => setting.company_id);
   const { data: existingInvoices, error: existingError } = await databaseAdmin
     .from('incubation_fee_invoices')
-    .select('company_id, billing_month')
+    .select('id, company_id, status')
     .in('company_id', companyIds)
     .eq('billing_month', billingMonth);
   if (existingError) throw existingError;
 
-  const existingKeys = new Set(
-    (existingInvoices || []).map((row) => `${row.company_id}:${row.billing_month}`)
-  );
+  const activeCompanies = new Set<string>();
+  const voidedByCompany = new Map<string, string>();
+  for (const row of (existingInvoices || []) as Array<{ id: string; company_id: string; status: string }>) {
+    if (row.status === 'void') voidedByCompany.set(row.company_id, row.id);
+    else activeCompanies.add(row.company_id);
+  }
 
   const invoicesToCreate: Array<{
     company_id: string;
@@ -175,19 +178,18 @@ export async function runMonthlyFeeCycle(
     status: string;
     remarks: string;
   }> = [];
+  const restoredInvoices: CreatedInvoice[] = [];
 
-  for (const setting of eligibleSettings.filter(
-    (s) => !existingKeys.has(`${s.company_id}:${billingMonth}`)
-  )) {
+  for (const setting of eligibleSettings.filter((s) => !activeCompanies.has(s.company_id))) {
     const dueDate = new Date(
       Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), setting.due_day)
     );
     const invoiceNumber = await nextInvoiceNumber(
       databaseAdmin,
       monthStart.getUTCFullYear(),
-      invoicesToCreate.map((i) => i.invoice_number)
+      [...invoicesToCreate, ...restoredInvoices].map((i) => i.invoice_number)
     );
-    invoicesToCreate.push({
+    const row = {
       company_id: setting.company_id,
       invoice_number: invoiceNumber,
       billing_month: billingMonth,
@@ -196,17 +198,30 @@ export async function runMonthlyFeeCycle(
       due_date: toDateOnlyUtc(dueDate),
       status: 'pending',
       remarks: 'Auto-generated on month start.',
-    });
+    };
+
+    // A deleted (void) invoice for this company/month blocks a new row via the unique key, so reuse it.
+    const voidedId = voidedByCompany.get(setting.company_id);
+    if (voidedId) {
+      const { error: restoreError } = await databaseAdmin
+        .from('incubation_fee_invoices')
+        .update(row)
+        .eq('id', voidedId);
+      if (restoreError) throw restoreError;
+      restoredInvoices.push({ id: voidedId, ...row });
+    } else {
+      invoicesToCreate.push(row);
+    }
   }
 
-  let createdInvoices: CreatedInvoice[] = [];
+  let createdInvoices: CreatedInvoice[] = [...restoredInvoices];
   if (invoicesToCreate.length > 0) {
     const { data: inserted, error: insertError } = await databaseAdmin
       .from('incubation_fee_invoices')
       .insert(invoicesToCreate)
       .select('id, company_id, invoice_number, billing_month, amount, due_date');
     if (insertError) throw insertError;
-    createdInvoices = (inserted || []) as CreatedInvoice[];
+    createdInvoices = [...createdInvoices, ...((inserted || []) as CreatedInvoice[])];
   }
 
   const settingsByCompanyId = new Map(
@@ -300,5 +315,9 @@ export async function runMonthlyFeeCycle(
     emailsSent,
     emailErrors,
     utcDate: now.toISOString(),
+    message:
+      createdInvoices.length === 0
+        ? `No new invoices created for ${billingMonth.slice(0, 7)}: all eligible companies already have one.`
+        : undefined,
   };
 }
