@@ -15,9 +15,10 @@ import type { MysqlFromClient, MysqlRpcClient } from '@/lib/mysql';
 const padSeq = (n: number) => String(n).padStart(5, '0');
 
 /**
- * Next invoice number = largest existing sequence for the year + 1.
- * Considers all invoices (including void and manually edited ones) plus
- * `pending` numbers generated in the same batch but not yet saved.
+ * Next invoice number = largest sequence among active (non-void) invoices for the year + 1.
+ * Voided invoices are ignored; any void row holding the number about to be issued
+ * is renamed so the unique invoice_number constraint is not violated.
+ * `pending` holds numbers generated in the same batch but not yet saved.
  */
 export const nextInvoiceNumber = async (
   databaseAdmin: MysqlFromClient,
@@ -28,18 +29,34 @@ export const nextInvoiceNumber = async (
   const prefix = `SIIF-INV-${yr}-`;
   const { data, error } = await databaseAdmin
     .from('incubation_fee_invoices')
-    .select('invoice_number')
+    .select('id, invoice_number, status')
     .like('invoice_number', `${prefix}%`);
   if (error) throw new Error(`Failed to generate invoice number: ${error.message}`);
 
+  const parseSeq = (num?: string | null) => {
+    const match = num?.startsWith(prefix) ? /^(\d+)$/.exec(num.slice(prefix.length)) : null;
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  const rows = (data || []) as Array<{ id: string; invoice_number: string; status: string }>;
   let max = 0;
-  const all = [...((data || []) as Array<{ invoice_number: string }>).map((r) => r.invoice_number), ...pending];
-  for (const num of all) {
-    if (!num?.startsWith(prefix)) continue;
-    const match = /(\d+)$/.exec(num.slice(prefix.length));
-    if (match) max = Math.max(max, parseInt(match[1], 10));
+  for (const row of rows) {
+    if (row.status !== 'void') max = Math.max(max, parseSeq(row.invoice_number));
   }
-  return `${prefix}${padSeq(max + 1)}`;
+  for (const num of pending) max = Math.max(max, parseSeq(num));
+
+  const nextNumber = `${prefix}${padSeq(max + 1)}`;
+
+  const blockers = rows.filter((r) => r.status === 'void' && r.invoice_number === nextNumber);
+  for (const row of blockers) {
+    const { error: renameError } = await databaseAdmin
+      .from('incubation_fee_invoices')
+      .update({ invoice_number: `${row.invoice_number}-VOID-${row.id}`.slice(0, 80) })
+      .eq('id', row.id);
+    if (renameError) throw new Error(`Failed to generate invoice number: ${renameError.message}`);
+  }
+
+  return nextNumber;
 };
 
 /**

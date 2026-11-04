@@ -29,6 +29,7 @@ export default function MonthlyInvoicesPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [generateMonth, setGenerateMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [generating, setGenerating] = useState(false);
+  const [renumbering, setRenumbering] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
@@ -231,6 +232,27 @@ export default function MonthlyInvoicesPage() {
     }
   };
 
+  const handleRenumber = async () => {
+    if (!window.confirm('Renumber ALL invoices sequentially by billing month? Existing invoice numbers (including manual edits) will change.')) return;
+    setRenumbering(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch('/api/admin/fee-management/invoices/renumber', {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to renumber invoices');
+      setNotice(`Renumbered ${payload.updated} invoice(s).`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to renumber invoices');
+    } finally {
+      setRenumbering(false);
+    }
+  };
+
   const handleLogout = async () => {
     await database.auth.signOut();
     router.push('/login');
@@ -265,6 +287,9 @@ export default function MonthlyInvoicesPage() {
               {fixingMonth ? 'Updating...' : 'Fix: May → June 2026'}
             </button>
           )}
+          <button onClick={handleRenumber} disabled={renumbering} className="rounded-lg bg-[#7C3AED] px-4 py-2 text-white font-semibold hover:bg-[#6D28D9] disabled:opacity-50">
+            {renumbering ? 'Renumbering...' : 'Renumber in Order'}
+          </button>
           <button onClick={handleSync} disabled={syncing} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold hover:bg-[#2289b5] disabled:opacity-50">
             {syncing ? 'Syncing...' : 'Sync Invoices'}
           </button>
