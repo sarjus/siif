@@ -10,25 +10,36 @@
  * SERVER-SIDE ONLY — uses service role client.
  */
 
-import type { MysqlRpcClient } from '@/lib/mysql';
+import type { MysqlFromClient, MysqlRpcClient } from '@/lib/mysql';
 
 const padSeq = (n: number) => String(n).padStart(5, '0');
 
 /**
- * Atomically get the next invoice number for the given year.
- * Calls the MySQL `next_siif_number('INV', year)` function.
+ * Next invoice number = largest existing sequence for the year + 1.
+ * Considers all invoices (including void and manually edited ones) plus
+ * `pending` numbers generated in the same batch but not yet saved.
  */
 export const nextInvoiceNumber = async (
-  databaseAdmin: MysqlRpcClient,
-  year?: number
+  databaseAdmin: MysqlFromClient,
+  year?: number,
+  pending: string[] = []
 ): Promise<string> => {
   const yr = year ?? new Date().getFullYear();
-  const { data, error } = await databaseAdmin.rpc('next_siif_number', {
-    p_series: 'INV',
-    p_year: yr,
-  });
+  const prefix = `SIIF-INV-${yr}-`;
+  const { data, error } = await databaseAdmin
+    .from('incubation_fee_invoices')
+    .select('invoice_number')
+    .like('invoice_number', `${prefix}%`);
   if (error) throw new Error(`Failed to generate invoice number: ${error.message}`);
-  return `SIIF-INV-${yr}-${padSeq(data as number)}`;
+
+  let max = 0;
+  const all = [...((data || []) as Array<{ invoice_number: string }>).map((r) => r.invoice_number), ...pending];
+  for (const num of all) {
+    if (!num?.startsWith(prefix)) continue;
+    const match = /(\d+)$/.exec(num.slice(prefix.length));
+    if (match) max = Math.max(max, parseInt(match[1], 10));
+  }
+  return `${prefix}${padSeq(max + 1)}`;
 };
 
 /**

@@ -11,6 +11,7 @@ import { MysqlClient, type MysqlQueryInput, type MysqlRow } from '@/lib/mysql-cl
 export type { MysqlQueryInput } from '@/lib/mysql-client';
 
 export type MysqlRpcClient = Pick<MysqlClient, 'rpc'>;
+export type MysqlFromClient = Pick<MysqlClient, 'from'>;
 
 let pool: Pool | undefined;
 

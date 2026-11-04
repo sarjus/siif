@@ -184,7 +184,8 @@ export async function runMonthlyFeeCycle(
     );
     const invoiceNumber = await nextInvoiceNumber(
       databaseAdmin,
-      monthStart.getUTCFullYear()
+      monthStart.getUTCFullYear(),
+      invoicesToCreate.map((i) => i.invoice_number)
     );
     invoicesToCreate.push({
       company_id: setting.company_id,

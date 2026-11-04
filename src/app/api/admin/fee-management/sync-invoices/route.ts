@@ -106,7 +106,11 @@ export async function POST(request: NextRequest) {
 
       if (!existing) {
         // No invoice for this month yet — create it
-        const invoiceNumber = await nextInvoiceNumber(databaseAdmin, currentMonth.getFullYear());
+        const invoiceNumber = await nextInvoiceNumber(
+          databaseAdmin,
+          currentMonth.getFullYear(),
+          createdInvoices.map((i) => String(i.invoice_number))
+        );
         createdInvoices.push({
           company_id: setting.company_id,
           invoice_number: invoiceNumber,
