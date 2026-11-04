@@ -25,6 +25,8 @@ export default function MonthlyInvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
   const [fixingMonth, setFixingMonth] = useState(false);
+  const [sortKey, setSortKey] = useState<'invoice' | 'company' | 'month'>('month');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [generateMonth, setGenerateMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -73,6 +75,29 @@ export default function MonthlyInvoicesPage() {
       return matchesStatus && matchesSearch;
     });
   }, [invoices, search, statusFilter]);
+
+  const sortedInvoices = useMemo(() => {
+    const getValue = (invoice: InvoiceRow) => {
+      if (sortKey === 'invoice') return invoice.invoice_number || '';
+      if (sortKey === 'company') return invoice.applications?.business_name || '';
+      return invoice.billing_month || '';
+    };
+    const direction = sortDir === 'asc' ? 1 : -1;
+    return [...filteredInvoices].sort(
+      (a, b) =>
+        direction *
+        getValue(a).localeCompare(getValue(b), undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [filteredInvoices, sortKey, sortDir]);
+
+  const toggleSort = (key: 'invoice' | 'company' | 'month') => {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   const totals = useMemo(() => ({
     totalAmount: filteredInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0),
@@ -281,13 +306,23 @@ export default function MonthlyInvoicesPage() {
           <table className="w-full">
             <thead>
               <tr style={{ backgroundColor: '#F5F6F7' }}>
-                {['Invoice', 'Company', 'Billing Month', 'Due Date', 'Amount', 'Paid', 'Status', 'Action'].map((heading) => (
-                  <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">{heading}</th>
+                {([
+                  ['Invoice', 'invoice'], ['Company', 'company'], ['Billing Month', 'month'],
+                  ['Due Date', null], ['Amount', null], ['Paid', null], ['Status', null], ['Action', null],
+                ] as const).map(([heading, key]) => (
+                  <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">
+                    {key ? (
+                      <button onClick={() => toggleSort(key)} className="flex items-center gap-1 font-semibold hover:text-[#FF3B3B]">
+                        {heading}
+                        <span className="text-xs">{sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+                      </button>
+                    ) : heading}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filteredInvoices.map((invoice) => (
+              {sortedInvoices.map((invoice) => (
                 <tr key={invoice.id} className="border-t border-gray-200">
                   <td className="px-4 py-4 text-sm text-[#4A4A4A]">
                     {editingInvoiceId === invoice.id ? (
