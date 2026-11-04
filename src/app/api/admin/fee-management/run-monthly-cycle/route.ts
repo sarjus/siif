@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company accounts cannot run monthly cycles.' }, { status: 403 });
     }
 
-    const result = await runMonthlyFeeCycle(true);
+    const body = (await request.json().catch(() => ({}))) as { month?: string };
+    const result = await runMonthlyFeeCycle(true, body?.month || undefined);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(

@@ -91,8 +91,24 @@ const getFirstInvoiceMonth = (startDate: string, dueDay: number) => {
 const currentMonthStartUtc = (now: Date) =>
   new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
-export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycleResult> {
+export async function runMonthlyFeeCycle(
+  force: boolean,
+  targetMonth?: string
+): Promise<MonthlyFeeCycleResult> {
   const now = new Date();
+
+  let monthStart = currentMonthStartUtc(now);
+  if (targetMonth) {
+    const match = /^(\d{4})-(\d{2})$/.exec(targetMonth);
+    const month = match ? Number(match[2]) : 0;
+    if (!match || month < 1 || month > 12) {
+      throw new Error('Invalid month. Use YYYY-MM format.');
+    }
+    monthStart = new Date(Date.UTC(Number(match[1]), month - 1, 1));
+    if (monthStart > currentMonthStartUtc(now)) {
+      throw new Error('Cannot generate invoices for a future month.');
+    }
+  }
 
   if (!force && now.getUTCDate() !== 1) {
     return {
@@ -107,7 +123,6 @@ export async function runMonthlyFeeCycle(force: boolean): Promise<MonthlyFeeCycl
   }
 
   const databaseAdmin = createDatabaseClient();
-  const monthStart = currentMonthStartUtc(now);
   const billingMonth = toDateOnlyUtc(monthStart);
 
   const { data: settingsData, error: settingsError } = await databaseAdmin

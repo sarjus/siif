@@ -25,6 +25,12 @@ export default function MonthlyInvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [deletingInvoiceId, setDeletingInvoiceId] = useState<string | null>(null);
   const [fixingMonth, setFixingMonth] = useState(false);
+  const [generateMonth, setGenerateMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [generating, setGenerating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [savingInvoiceId, setSavingInvoiceId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -144,6 +150,62 @@ export default function MonthlyInvoicesPage() {
     }
   };
 
+  const handleGenerateMonth = async () => {
+    if (!generateMonth) {
+      setError('Select a month to generate invoices for.');
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch('/api/admin/fee-management/run-monthly-cycle', {
+        method: 'POST',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: generateMonth }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to generate invoices');
+      setNotice(payload.message || `Invoices created for ${generateMonth}: ${payload.created}.`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate invoices');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleSaveInvoiceNumber = async (invoice: InvoiceRow) => {
+    const value = editingValue.trim();
+    if (!value) {
+      setError('Invoice number cannot be empty.');
+      return;
+    }
+    if (value === invoice.invoice_number) {
+      setEditingInvoiceId(null);
+      return;
+    }
+    setSavingInvoiceId(invoice.id);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/fee-management/invoices', {
+        method: 'PATCH',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id, invoiceNumber: value }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to update invoice number');
+      setInvoices((current) =>
+        current.map((item) => (item.id === invoice.id ? { ...item, invoice_number: value } : item))
+      );
+      setEditingInvoiceId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update invoice number');
+    } finally {
+      setSavingInvoiceId(null);
+    }
+  };
+
   const handleLogout = async () => {
     await database.auth.signOut();
     router.push('/login');
@@ -158,7 +220,17 @@ export default function MonthlyInvoicesPage() {
       userEmail={userEmail}
       onLogout={handleLogout}
       headerActions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            value={generateMonth}
+            max={new Date().toISOString().slice(0, 7)}
+            onChange={(e) => setGenerateMonth(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <button onClick={handleGenerateMonth} disabled={generating} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
+            {generating ? 'Generating...' : 'Generate Invoices'}
+          </button>
           {invoices.some((inv) => inv.billing_month?.startsWith('2026-05')) && (
             <button
               onClick={() => handleFixBillingMonth('2026-05-01', '2026-06-01')}
@@ -175,6 +247,7 @@ export default function MonthlyInvoicesPage() {
       }
     >
       {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
@@ -216,7 +289,22 @@ export default function MonthlyInvoicesPage() {
             <tbody>
               {filteredInvoices.map((invoice) => (
                 <tr key={invoice.id} className="border-t border-gray-200">
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{invoice.invoice_number}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">
+                    {editingInvoiceId === invoice.id ? (
+                      <input
+                        autoFocus
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveInvoiceNumber(invoice);
+                          if (e.key === 'Escape') setEditingInvoiceId(null);
+                        }}
+                        className="w-40 rounded border border-gray-300 px-2 py-1"
+                      />
+                    ) : (
+                      invoice.invoice_number
+                    )}
+                  </td>
                   <td className="px-4 py-4">
                     <div className="font-semibold text-[#4A4A4A]">{invoice.applications?.business_name || 'Company'}</div>
                     <div className="text-sm text-[#8A8A8A]">{invoice.applications?.email || '-'}</div>
@@ -230,7 +318,31 @@ export default function MonthlyInvoicesPage() {
                       {invoice.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-4 flex gap-2">
+                    {editingInvoiceId === invoice.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveInvoiceNumber(invoice)}
+                          disabled={savingInvoiceId === invoice.id}
+                          className="rounded-lg bg-[#16A34A] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          {savingInvoiceId === invoice.id ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setEditingInvoiceId(null)}
+                          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-semibold text-[#4A4A4A]"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingInvoiceId(invoice.id); setEditingValue(invoice.invoice_number); }}
+                        className="rounded-lg bg-[#2AA0D3] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2289b5]"
+                      >
+                        Edit No.
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteInvoice(invoice)}
                       disabled={deletingInvoiceId === invoice.id}
