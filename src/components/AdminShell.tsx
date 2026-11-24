@@ -21,6 +21,7 @@ import {
   CalendarDays,
   BookOpen,
   BadgeCheck,
+  MapPinned,
 } from 'lucide-react';
 
 type AdminShellProps = {
@@ -73,6 +74,7 @@ const navSections = [
     items: [
       { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: Banknote },
       { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
+      { label: 'Workspace Allocation', href: '/admin/workspace-allocations', description: 'Assign chairs and cubicles', icon: MapPinned },
     ],
   },
 ];

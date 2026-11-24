@@ -60,6 +60,11 @@ is `uploads`, with photos stored in `uploads/incubatee-photos`. Filesystem
 uploads require a persistent disk and are not suitable for ephemeral serverless
 instances without a persistent volume.
 
+For an existing database, run
+[`workspace_allocations_migration.sql`](./workspace_allocations_migration.sql)
+before using **Admin → Workspace Allocation**. Fresh installs already include
+the workspace tables in `mysql_schema.sql`.
+
 ## Build
 
 ```bash

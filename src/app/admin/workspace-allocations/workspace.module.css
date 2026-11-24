@@ -1,0 +1,75 @@
+.plan {
+  position: relative;
+  width: 100%;
+  min-width: 320px;
+  max-width: 508px;
+  margin-inline: auto;
+  aspect-ratio: 496 / 806;
+  overflow: hidden;
+  isolation: isolate;
+  background: white;
+}
+
+.drawing {
+  position: absolute;
+  top: -14.89%;
+  left: -35.08%;
+  width: 166.73%;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(1) contrast(0.8) brightness(1.14);
+}
+
+.available { --status-color: #08654a; --status-fill: #e1f6ee; }
+.allocated { --status-color: #1e45a4; --status-fill: #e5edff; }
+.reserved { --status-color: #8a4a05; --status-fill: #fff0ce; }
+.blocked { --status-color: #745b34; --status-fill: #f5eee2; }
+.shared { --status-color: #566273; --status-fill: #eef1f5; }
+
+.badge {
+  color: var(--status-color);
+  background: var(--status-fill);
+}
+
+.marker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  width: clamp(23px, 6%, 30px);
+  aspect-ratio: 1;
+  border: 1px solid var(--status-color);
+  border-radius: 999px;
+  background: var(--status-fill);
+  color: var(--status-color);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cubicle {
+  width: 27%;
+  height: 16%;
+  aspect-ratio: auto;
+  transform: translate(-50%, -62%);
+  border-radius: 0.4rem;
+  border-width: 2px;
+  background: color-mix(in srgb, var(--status-fill) 66%, transparent);
+  font-size: 0.9rem;
+}
+
+.cubicleLabel {
+  display: grid;
+  justify-items: center;
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--status-fill);
+}
+
+.marker:disabled { cursor: default; }
+.marker:not(:disabled):hover { z-index: 2; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--status-color); }
+.marker:focus-visible, .marker[aria-pressed='true'] { z-index: 3; outline: 2px solid #172033; outline-offset: 2px; }
+.marker[data-match='true'] { z-index: 2; box-shadow: 0 0 0 2px white, 0 0 0 4px #244ac5; }

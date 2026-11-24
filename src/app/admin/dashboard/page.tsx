@@ -16,6 +16,7 @@ import {
   FileText,
   Gauge,
   Landmark,
+  MapPinned,
   ReceiptText,
   Settings,
   Users,
@@ -78,6 +79,7 @@ const sections: Section[] = [
     items: [
       { label: 'Staff Payments', description: 'Salary and honorarium disbursements', href: '/admin/staff-payments', icon: Banknote },
       { label: 'Conference Room', description: 'Manage room bookings and requests', href: '/admin/conference', icon: CalendarDays },
+      { label: 'Workspace Allocation', description: 'Assign chairs and cubicles to companies', href: '/admin/workspace-allocations', icon: MapPinned },
     ],
   },
 ];
