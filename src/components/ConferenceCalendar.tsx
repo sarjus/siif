@@ -1,16 +1,9 @@
 'use client';
 
-/**
- * ConferenceCalendar — Google Calendar-style UI
- * Fixes:
- *  - Times always shown in LOCAL time (getHours/getMinutes, never raw UTC string)
- *  - Event positions use index-based offset so grid lines align perfectly
- *  - Approved events show "Title · Company"
- *  - Pending events show with dashed border
- */
-
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from '@/components/icons/glyphs';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3 } from '@/components/icons/glyphs';
+import { NavigationIcon } from '@/components/icons/icon';
+import { Button } from '@/components/ui/button';
 
 export type Booking = {
   id: string;
@@ -42,12 +35,38 @@ const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_NAMES = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
-const COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  approved: { bg: '#1a73e8', border: '#1558b0', text: '#fff' },
-  pending:  { bg: '#f9ab00', border: '#b06000', text: '#fff' },
-  rejected: { bg: '#d93025', border: '#a50e0e', text: '#fff' },
-  cancelled:{ bg: '#e0e0e0', border: '#bdbdbd', text: '#5f6368' },
+const bookingStyles: Record<Booking['status'], string> = {
+  approved: 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100',
+  pending: 'border-amber-400 border-dashed bg-amber-50 text-amber-950 hover:bg-amber-100',
+  rejected: 'border-red-300 bg-red-50 text-red-900',
+  cancelled: 'border-slate-300 bg-slate-50 text-slate-700',
 };
+
+const dateLabel = new Intl.DateTimeFormat('en-IN', { dateStyle: 'full' });
+const todayStyle = 'bg-[#C52936] text-white';
+const calendarViews = [{ id: 'week', label: 'Week', icon: CalendarClock }, { id: 'month', label: 'Month', icon: CalendarDays }] as const;
+
+function CalendarNavigation({ previous, next, unit }: { previous: () => void; next: () => void; unit: string }) {
+  return <div className="flex gap-1">
+    <Button type="button" size="icon-lg" variant="ghost" aria-label={`Previous ${unit}`} title={`Previous ${unit}`} onClick={previous}>
+      <NavigationIcon icon={ChevronLeft} className="size-5" />
+    </Button>
+    <Button type="button" size="icon-lg" variant="ghost" aria-label={`Next ${unit}`} title={`Next ${unit}`} onClick={next}>
+      <NavigationIcon icon={ChevronRight} className="size-5" />
+    </Button>
+  </div>;
+}
+
+function BookingLegend() {
+  return <div className="flex flex-wrap items-center gap-2" aria-label="Booking status legend">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900">
+      <CircleCheck aria-hidden="true" className="size-3.5" /> Approved
+    </span>
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-400 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-950">
+      <Clock3 aria-hidden="true" className="size-3.5" /> Pending
+    </span>
+  </div>;
+}
 
 // ── Pure helpers ───────────────────────────────────────────────────────────
 function sameDay(a: Date, b: Date) {
@@ -123,12 +142,11 @@ function EventTile({ b, onClick }: { b: Booking; onClick: () => void }) {
     : endTotalMins + 1440 - startTotalMins; // midnight wrap
 
   // Index-based: position relative to FIRST_HOUR
-  const topPx    = ((startTotalMins - FIRST_HOUR * 60) / 60) * HOUR_H;
-  const heightPx = Math.max((durationMins / 60) * HOUR_H - 2, 22);
-
-  if (topPx + heightPx < 0 || topPx > TOTAL_H) return null; // out of visible range
-
-  const c = COLORS[b.status] ?? COLORS.approved;
+  const offset = ((startTotalMins - FIRST_HOUR * 60) / 60) * HOUR_H;
+  const endOffset = offset + (durationMins / 60) * HOUR_H;
+  if (endOffset <= 0 || offset >= TOTAL_H) return null;
+  const top = Math.max(offset, 0);
+  const height = Math.min(Math.max(endOffset - top - 2, 22), TOTAL_H - top);
   const company = b.applications?.business_name;
   const timeLabel = localTime(start);
   const bodyLabel = b.status === 'approved' && company
@@ -136,24 +154,17 @@ function EventTile({ b, onClick }: { b: Booking; onClick: () => void }) {
     : b.title;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      title={`${bodyLabel}  ${timeLabel} – ${localTime(end)}`}
-      className="absolute left-0.5 right-0.5 z-10 cursor-pointer overflow-hidden rounded px-1.5 py-0.5 select-none"
-      style={{
-        top: `${Math.max(topPx, 0)}px`,
-        height: `${heightPx}px`,
-        backgroundColor: c.bg,
-        border: b.status === 'pending' ? `2px dashed ${c.border}` : `1px solid ${c.border}`,
-        color: c.text,
-        fontSize: '11px',
-        lineHeight: '1.3',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
-      }}
+      title={`${bodyLabel} · ${timeLabel}–${localTime(end)} · ${b.status}`}
+      aria-label={`${bodyLabel}, ${timeLabel} to ${localTime(end)}, ${b.status}`}
+      className={`absolute inset-x-1 z-10 flex cursor-pointer flex-col items-start overflow-hidden rounded-lg border px-2 py-0.5 text-left text-xs leading-tight shadow-sm focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-slate-800 ${bookingStyles[b.status]}`}
+      style={{ top, height }}
     >
-      <div className="font-bold truncate">{timeLabel}</div>
-      <div className="truncate opacity-90">{bodyLabel}</div>
-    </div>
+      <span className="max-w-full truncate font-bold">{timeLabel}–{localTime(end)}</span>
+      <span className="max-w-full truncate font-medium">{bodyLabel}</span>
+    </button>
   );
 }
 
@@ -165,20 +176,40 @@ export default function ConferenceCalendar({
   const [view, setView]     = useState<'week' | 'month'>('week');
   const [anchor, setAnchor] = useState(new Date(today));
   const [miniMon, setMiniMon] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  const weekScroll = useRef<HTMLDivElement>(null);
 
   const weekStart = useMemo(() => sundayWeekStart(anchor), [anchor]);
   const weekDays  = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const mGrid     = useMemo(() => monthGrid(anchor.getFullYear(), anchor.getMonth()), [anchor]);
   const mini      = useMemo(() => miniGrid(miniMon.y, miniMon.m), [miniMon]);
 
-  const nav = (dir: -1 | 1) => {
-    if (view === 'week') setAnchor(addDays(anchor, dir * 7));
-    else setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1));
+  useEffect(() => {
+    const container = weekScroll.current;
+    const selectedDay = container?.querySelector('[data-anchor-day]');
+    const timeColumn = container?.querySelector('[data-time-column]');
+    if (!container || !selectedDay || !timeColumn) return;
+
+    const day = selectedDay.getBoundingClientRect();
+    const left = container.getBoundingClientRect().left;
+    const visibleStart = left + timeColumn.getBoundingClientRect().width;
+    const visibleEnd = left + container.clientWidth;
+    if (day.left < visibleStart) container.scrollLeft += day.left - visibleStart;
+    else if (day.right > visibleEnd) container.scrollLeft += day.right - visibleEnd;
+  }, [anchor, view]);
+
+  const selectDate = (date: Date) => {
+    setAnchor(new Date(date));
+    setMiniMon({ y: date.getFullYear(), m: date.getMonth() });
   };
-  const goToday = () => {
-    setAnchor(new Date(today));
-    setMiniMon({ y: today.getFullYear(), m: today.getMonth() });
-  };
+
+  const nav = (dir: -1 | 1) => selectDate(view === 'week'
+    ? addDays(anchor, dir * 7)
+    : new Date(anchor.getFullYear(), anchor.getMonth() + dir, 1));
+
+  const navigateMiniMonth = (dir: -1 | 1) => setMiniMon(({ y, m }) => {
+    const date = new Date(y, m + dir, 1);
+    return { y: date.getFullYear(), m: date.getMonth() };
+  });
 
   const periodLabel = view === 'week'
     ? (() => {
@@ -204,151 +235,98 @@ export default function ConferenceCalendar({
   };
 
   return (
-    <div className="flex h-full bg-white overflow-hidden" style={{ fontFamily: 'Google Sans, Roboto, Arial, sans-serif' }}>
-
-      {/* ── LEFT SIDEBAR ── */}
-      <div className="hidden md:flex w-52 shrink-0 flex-col border-r border-[#dadce0] pt-3 pb-4 px-2">
-        {/* Mini calendar */}
-        <div className="mb-1 flex items-center justify-between px-1">
-          <span className="text-sm font-semibold text-[#3c4043]">
-            {MONTH_NAMES[miniMon.m]} {miniMon.y}
-          </span>
-          <div className="flex">
-            <button onClick={() => setMiniMon(p => { const d = new Date(p.y, p.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })}
-              className="p-1 rounded-full hover:bg-[#f1f3f4]"><ChevronLeft className="size-3.5 text-[#5f6368]" /></button>
-            <button onClick={() => setMiniMon(p => { const d = new Date(p.y, p.m + 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; })}
-              className="p-1 rounded-full hover:bg-[#f1f3f4]"><ChevronRight className="size-3.5 text-[#5f6368]" /></button>
-          </div>
+    <div className="flex h-full overflow-hidden bg-white text-slate-900">
+      <aside aria-label="Mini calendar" className="hidden w-52 shrink-0 flex-col border-r border-slate-200 bg-slate-50/75 p-3 xl:flex">
+        <div className="mb-2 flex items-center justify-between gap-1">
+          <span className="text-sm font-bold text-slate-800">{MONTH_NAMES[miniMon.m]} {miniMon.y}</span>
+          <CalendarNavigation unit="mini calendar month" previous={() => navigateMiniMonth(-1)} next={() => navigateMiniMonth(1)} />
         </div>
-        <div className="grid grid-cols-7 text-center mb-0.5">
-          {['S','M','T','W','T','F','S'].map((d, i) => (
-            <span key={i} className="text-[10px] font-medium text-[#70757a] py-0.5">{d}</span>
-          ))}
+        <div className="grid grid-cols-7 text-center text-xs font-semibold text-slate-500">
+          {DAY_LABELS.map((day) => <span key={day} className="py-1">{day[0]}</span>)}
         </div>
         <div className="grid grid-cols-7 text-center">
-          {mini.map((d, i) => {
-            if (!d) return <span key={i} />;
-            const isT   = sameDay(d, today);
-            const isSel = sameDay(d, anchor);
+          {mini.map((day, index) => {
+            if (!day) return <span key={index} />;
+            const selected = sameDay(day, anchor);
+            const current = sameDay(day, today);
             return (
-              <button key={i}
-                onClick={() => { setAnchor(new Date(d)); setMiniMon({ y: d.getFullYear(), m: d.getMonth() }); }}
-                className={`mx-auto my-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-medium transition-colors
-                  ${isT ? 'bg-[#1a73e8] text-white' : isSel ? 'bg-[#e8f0fe] text-[#1a73e8]' : 'text-[#3c4043] hover:bg-[#f1f3f4]'}
-                  ${d.getMonth() !== miniMon.m ? 'opacity-30' : ''}`}>
-                {d.getDate()}
+              <button key={index} type="button" onClick={() => selectDate(day)}
+                aria-label={dateLabel.format(day)} aria-current={current ? 'date' : undefined} aria-pressed={selected}
+                className={'mx-auto my-0.5 grid size-6 place-items-center rounded-lg text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-slate-800 ' +
+                  (current ? todayStyle : selected ? 'bg-rose-100 text-rose-900' : 'text-slate-700 hover:bg-slate-200')}>
+                {day.getDate()}
               </button>
             );
           })}
         </div>
+      </aside>
 
-        {/* Legend */}
-        <div className="mt-5 space-y-2 px-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5f6368]">Legend</p>
-          {(['approved','pending'] as const).map(s => (
-            <div key={s} className="flex items-center gap-2 text-xs text-[#3c4043]">
-              <span className="h-3 w-3 shrink-0 rounded-sm"
-                style={{ backgroundColor: COLORS[s].bg,
-                         border: s === 'pending' ? `2px dashed ${COLORS[s].border}` : 'none' }} />
-              {s.charAt(0).toUpperCase() + s.slice(1)}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="shrink-0 space-y-3 border-b border-slate-200 px-3 py-3 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <h2 aria-live="polite" className="text-base font-bold text-slate-900 sm:text-lg">{periodLabel}</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" size="lg" onClick={() => selectDate(today)}>Today</Button>
+              <CalendarNavigation unit={view} previous={() => nav(-1)} next={() => nav(1)} />
+              <div role="group" aria-label="Calendar view" className="flex gap-0.5 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                {calendarViews.map(({ id, label, icon: Icon }) => (
+                  <Button key={id} type="button" variant="ghost" aria-pressed={view === id} onClick={() => setView(id)}
+                    className={view === id ? 'bg-rose-100 text-rose-900 hover:bg-rose-100 hover:text-rose-900' : 'text-slate-600'}>
+                    <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />{label}
+                  </Button>
+                ))}
+              </div>
             </div>
-          ))}
-          {canRequest && (
-            <p className="mt-2 text-[11px] leading-relaxed text-[#5f6368]">
-              Click an empty slot to request a booking
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── MAIN AREA ── */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-
-        {/* Toolbar */}
-        <div className="flex shrink-0 items-center justify-between border-b border-[#dadce0] px-4 py-2">
-          <div className="flex items-center gap-1.5">
-            <button onClick={goToday}
-              className="rounded border border-[#dadce0] px-3 py-1.5 text-sm font-medium text-[#3c4043] hover:bg-[#f1f3f4]">
-              Today
-            </button>
-            <button onClick={() => nav(-1)} className="rounded-full p-1.5 hover:bg-[#f1f3f4]">
-              <ChevronLeft className="size-4 text-[#5f6368]" />
-            </button>
-            <button onClick={() => nav(1)} className="rounded-full p-1.5 hover:bg-[#f1f3f4]">
-              <ChevronRight className="size-4 text-[#5f6368]" />
-            </button>
-            <h2 className="ml-1 text-base font-medium text-[#3c4043]">{periodLabel}</h2>
           </div>
-          <div className="flex overflow-hidden rounded border border-[#dadce0] text-sm">
-            {(['week','month'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className={`px-4 py-1.5 font-medium capitalize transition-colors
-                  ${view === v ? 'bg-[#e8f0fe] text-[#1a73e8]' : 'text-[#3c4043] hover:bg-[#f1f3f4]'}`}>
-                {v}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <BookingLegend />
+            {canRequest && <p className="text-xs font-medium text-slate-600">
+              {view === 'week' ? 'Select a time slot to request a booking.' : 'Select a date to request a booking.'}
+            </p>}
           </div>
         </div>
 
-        {/* ── WEEK VIEW ── */}
         {view === 'week' && (
-          <div className="flex flex-1 overflow-auto">
-            {/* Time gutter */}
-            <div className="w-14 shrink-0 border-r border-[#dadce0] bg-white">
-              <div className="h-14 border-b border-[#dadce0]" /> {/* spacer aligns with day headers */}
-              {HOURS.map((h) => (
-                <div key={h} className="relative" style={{ height: HOUR_H }}>
-                  {/* Label sits ON the grid line — use -translate-y-1/2 */}
-                  <span className="absolute top-0 right-2 -translate-y-1/2 bg-white px-0.5 text-[10px] leading-none text-[#70757a]">
-                    {fmt12(h)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Day columns */}
-            <div className="flex min-w-0 flex-1 overflow-x-auto">
+          <div ref={weekScroll} className="min-h-0 flex-1 overflow-auto" aria-label="Weekly calendar">
+            <div className="grid min-w-[43rem] grid-cols-[3.5rem_repeat(7,minmax(5.5rem,1fr))]">
+              <div data-time-column className="sticky top-0 left-0 z-40 grid h-16 place-items-center border-r border-b border-slate-200 bg-slate-50" aria-hidden="true">
+                <Clock3 className="size-4 text-slate-500" />
+              </div>
               {weekDays.map((day) => {
-                const isT  = sameDay(day, today);
-                const past = isPast(day);
-                const bkgs = dayBkgs(day);
+                const current = sameDay(day, today);
                 return (
-                  <div key={day.toISOString()}
-                    className="flex min-w-[90px] flex-1 flex-col border-r border-[#dadce0] last:border-r-0">
-                    {/* Day header */}
-                    <div className="flex h-14 flex-col items-center justify-center border-b border-[#dadce0]">
-                      <span className={`text-[11px] font-medium uppercase ${isT ? 'text-[#1a73e8]' : 'text-[#70757a]'}`}>
-                        {DAY_LABELS[day.getDay()]}
-                      </span>
-                      <span className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xl font-semibold
-                        ${isT ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043]'}`}>
-                        {day.getDate()}
-                      </span>
-                    </div>
-
-                    {/* Slots — RELATIVE container so EventTile absolutes correctly */}
-                    <div className="relative" style={{ height: TOTAL_H }}>
-                      {/* Hour rows (clickable) */}
-                      {HOURS.map((h, idx) => (
-                        <div key={h}
-                          className={`absolute left-0 right-0 border-b border-[#e0e0e0]
-                            ${canRequest && !past ? 'cursor-pointer hover:bg-[#f0f4ff]' : ''}`}
-                          style={{ top: idx * HOUR_H, height: HOUR_H }}
-                          onClick={() => handleSlot(day, h)}
-                        />
-                      ))}
-                      {/* Half-hour hairlines */}
-                      {HOURS.map((_, idx) => (
-                        <div key={`hf-${idx}`}
-                          className="pointer-events-none absolute left-0 right-0"
-                          style={{ top: idx * HOUR_H + HOUR_H / 2, borderBottom: '1px dashed #f1f3f4' }}
-                        />
-                      ))}
-                      {/* Events */}
-                      {bkgs.map(b => (
-                        <EventTile key={b.id} b={b} onClick={() => onBookingClick?.(b)} />
-                      ))}
-                    </div>
+                  <div key={day.toISOString()} data-anchor-day={sameDay(day, anchor) ? '' : undefined} aria-current={current ? 'date' : undefined}
+                    className="sticky top-0 z-30 flex h-16 flex-col items-center justify-center gap-0.5 border-r border-b border-slate-200 bg-slate-50">
+                    <span className="text-xs font-semibold text-slate-600">{DAY_LABELS[day.getDay()]}</span>
+                    <span className={'grid size-8 place-items-center rounded-lg text-base font-bold ' + (current ? todayStyle : 'text-slate-900')}>{day.getDate()}</span>
+                  </div>
+                );
+              })}
+              <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50" aria-hidden="true">
+                {HOURS.map((hour) => (
+                  <div key={hour} className="border-b border-slate-200 px-1.5 pt-1.5 text-right text-[11px] font-semibold text-slate-600" style={{ height: HOUR_H }}>
+                    {fmt12(hour)}
+                  </div>
+                ))}
+              </div>
+              {weekDays.map((day) => {
+                const current = sameDay(day, today);
+                const requestable = canRequest && Boolean(onSlotClick) && !isPast(day);
+                return (
+                  <div key={day.toISOString()} className={'relative border-r border-slate-200 ' + (current ? 'bg-rose-50/35' : 'bg-white')} style={{ height: TOTAL_H }}>
+                    {HOURS.map((hour) => (
+                      <div key={hour} className="relative border-b border-slate-200" style={{ height: HOUR_H }}>
+                        <div className="pointer-events-none absolute inset-x-0 top-1/2 border-b border-dashed border-slate-100" />
+                        {requestable && (
+                          <button type="button" aria-label={'Request booking on ' + dateLabel.format(day) + ' at ' + fmt12(hour)}
+                            className="absolute inset-0 w-full cursor-pointer hover:bg-rose-100/65 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-inset"
+                            onClick={() => handleSlot(day, hour)} />
+                        )}
+                      </div>
+                    ))}
+                    {dayBkgs(day).map(booking => (
+                      <EventTile key={booking.id} b={booking} onClick={() => onBookingClick?.(booking)} />
+                    ))}
                   </div>
                 );
               })}
@@ -356,62 +334,48 @@ export default function ConferenceCalendar({
           </div>
         )}
 
-        {/* ── MONTH VIEW ── */}
         {view === 'month' && (
-          <div className="flex flex-1 flex-col overflow-auto">
-            {/* Day name row */}
-            <div className="grid shrink-0 grid-cols-7 border-b border-[#dadce0]">
-              {DAY_LABELS.map(d => (
-                <div key={d} className="border-r border-[#dadce0] py-2 text-center text-[11px] font-medium uppercase text-[#70757a] last:border-r-0">
-                  {d}
-                </div>
+          <div className="min-h-0 flex-1 overflow-auto" aria-label="Monthly calendar">
+            <div className="grid min-w-[38rem] grid-cols-7">
+              {DAY_LABELS.map(day => (
+                <div key={day} className="sticky top-0 z-20 border-r border-b border-slate-200 bg-slate-50 py-2.5 text-center text-xs font-semibold text-slate-600">{day}</div>
               ))}
-            </div>
-            {/* Grid */}
-            <div className="grid flex-1 grid-cols-7">
-              {mGrid.map((day, idx) => {
-                const isT    = sameDay(day, today);
-                const inMon  = day.getMonth() === anchor.getMonth();
-                const past   = isPast(day);
-                const bkgs   = dayBkgs(day);
+              {mGrid.map(day => {
+                const current = sameDay(day, today);
+                const inMonth = day.getMonth() === anchor.getMonth();
+                const requestable = canRequest && Boolean(onSlotClick) && inMonth && !isPast(day);
+                const dayBookings = dayBkgs(day);
                 return (
-                  <div key={idx}
-                    className={`flex min-h-[96px] flex-col border-b border-r border-[#dadce0] p-1 last:border-r-0
-                      ${!inMon ? 'bg-[#f8f9fa]' : 'bg-white'}
-                      ${canRequest && !past && inMon ? 'cursor-pointer hover:bg-[#f8f9fa]' : ''}`}
-                    onClick={() => { if (canRequest && !past && inMon) handleSlot(day, 9); }}>
-                    {/* Date number */}
-                    <div className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full self-start
-                      text-xs font-semibold
-                      ${isT ? 'bg-[#1a73e8] text-white' : inMon ? 'text-[#3c4043]' : 'text-[#bdc1c6]'}`}>
-                      {day.getDate()}
-                    </div>
-                    {/* Event pills */}
-                    <div className="flex-1 space-y-0.5 overflow-hidden">
-                      {bkgs.slice(0, 4).map(b => {
-                        const c = COLORS[b.status] ?? COLORS.approved;
-                        const company = b.applications?.business_name;
-                        const label = b.status === 'approved' && company
-                          ? `${localTime(new Date(b.start_time))} ${b.title} · ${company}`
-                          : `${localTime(new Date(b.start_time))} ${b.title}`;
+                  <div key={day.toISOString()} aria-current={current ? 'date' : undefined}
+                    className={'relative min-h-24 min-w-0 border-r border-b border-slate-200 p-1.5 ' +
+                      (!inMonth ? 'bg-slate-50' : current ? 'bg-rose-50/35' : 'bg-white')}>
+                    {requestable && (
+                      <button type="button" aria-label={'Request booking on ' + dateLabel.format(day)}
+                        className="absolute inset-0 w-full cursor-pointer hover:bg-rose-100/55 focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-inset"
+                        onClick={() => handleSlot(day, 9)} />
+                    )}
+                    <span className={'pointer-events-none relative mb-1 grid size-7 place-items-center rounded-lg text-xs font-bold ' +
+                      (current ? todayStyle : inMonth ? 'text-slate-800' : 'text-slate-500')}>{day.getDate()}</span>
+                    <div className="pointer-events-none relative space-y-1">
+                      {dayBookings.slice(0, 4).map(booking => {
+                        const company = booking.applications?.business_name;
+                        const label = localTime(new Date(booking.start_time)) + ' ' + booking.title +
+                          (booking.status === 'approved' && company ? ' · ' + company : '');
+                        const description = label + ', ' + booking.status;
                         return (
-                          <div key={b.id}
-                            onClick={e => { e.stopPropagation(); onBookingClick?.(b); }}
-                            title={label}
-                            className="cursor-pointer truncate rounded px-1.5 py-0.5 text-[11px] font-medium"
-                            style={{
-                              backgroundColor: c.bg,
-                              color: c.text,
-                              border: b.status === 'pending' ? `1px dashed ${c.border}` : 'none',
-                            }}>
+                          <button key={booking.id} type="button" onClick={() => onBookingClick?.(booking)}
+                            title={description} aria-label={description}
+                            className={'pointer-events-auto block w-full truncate rounded-md border px-1.5 py-1 text-left text-xs font-semibold focus-visible:outline-2 focus-visible:outline-slate-800 ' + bookingStyles[booking.status]}>
                             {label}
-                          </div>
+                          </button>
                         );
                       })}
-                      {bkgs.length > 4 && (
-                        <div className="px-1 text-[11px] font-medium text-[#1a73e8]">
-                          +{bkgs.length - 4} more
-                        </div>
+                      {dayBookings.length > 4 && (
+                        <button type="button" aria-label={'Show all bookings for ' + dateLabel.format(day)}
+                          className="pointer-events-auto rounded px-1.5 py-0.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 focus-visible:outline-2 focus-visible:outline-slate-800"
+                          onClick={() => { selectDate(day); setView('week'); }}>
+                          +{dayBookings.length - 4} more
+                        </button>
                       )}
                     </div>
                   </div>

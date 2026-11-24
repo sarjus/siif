@@ -144,7 +144,7 @@ export default function CompanyConferencePage() {
       {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
       {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
-      <div className="rounded-xl border border-[#dadce0] overflow-hidden bg-white" style={{ height: 'calc(100vh - 220px)', minHeight: '600px' }}>
+      <div className="h-[calc(100dvh-13.75rem)] min-h-[34rem] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <ConferenceCalendar
           bookings={bookings}
           canRequest

@@ -3,6 +3,7 @@
 import { FeedbackIcon } from '@/components/icons/feedback';
 
 import { ActionIcon } from '@/components/icons/icon';
+import { CalendarDays, ClipboardList } from '@/components/icons/glyphs';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -90,10 +91,11 @@ export default function AdminConferencePage() {
       {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-2 border-b border-[#E3E7EE]">
-        {(['calendar', 'requests'] as const).map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 text-sm font-semibold capitalize border-b-2 transition-colors ${activeTab === tab ? 'border-[#FF3B3B] text-[#FF3B3B]' : 'border-transparent text-[#667085] hover:text-[#344054]'}`}>
+      <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Conference room views">
+        {([{ tab: 'calendar', icon: CalendarDays }, { tab: 'requests', icon: ClipboardList }] as const).map(({ tab, icon: Icon }) => (
+          <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${activeTab === tab ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'}`}>
+            <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />
             {tab === 'calendar' ? 'Calendar View' : `Booking Requests${pendingBookings.length > 0 ? ` (${pendingBookings.length})` : ''}`}
           </button>
         ))}
@@ -101,7 +103,7 @@ export default function AdminConferencePage() {
 
       {/* Calendar tab */}
       {activeTab === 'calendar' && (
-        <div className="rounded-xl border border-[#dadce0] overflow-hidden bg-white" style={{ height: 'calc(100vh - 240px)', minHeight: '600px' }}>
+        <div className="h-[calc(100dvh-15rem)] min-h-[34rem] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <ConferenceCalendar bookings={bookings} onBookingClick={setSelected} />
         </div>
       )}
