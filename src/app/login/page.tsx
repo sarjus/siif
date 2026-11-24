@@ -106,12 +106,11 @@ function LoginContent() {
     const verifyCurrentSession = async () => {
       setError(null);
       setNotice(null);
-      const {
-        data: { session },
-      } = await database.auth.getSession();
+      const { data, error: sessionError } = await database.auth.getSession();
+      if (sessionError) throw new Error(sessionError.message);
 
-      if (!session?.user) return;
-      await routeByRole(session.user);
+      if (!data.session?.user) return;
+      await routeByRole(data.session.user);
     };
 
     const {
@@ -226,12 +225,13 @@ function LoginContent() {
         return;
       }
 
-      const {
-        data: { user },
-        error: userError,
-      } = await database.auth.getUser();
+      const { data: userData, error: userError } = await database.auth.getUser();
 
-      if (userError || !user) {
+      if (userError) {
+        throw new Error(userError.message);
+      }
+      const user = userData.user;
+      if (!user) {
         throw new Error('Session expired. Please login again.');
       }
 

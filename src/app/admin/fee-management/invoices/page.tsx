@@ -34,6 +34,9 @@ export default function MonthlyInvoicesPage() {
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [savingInvoiceId, setSavingInvoiceId] = useState<string | null>(null);
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const [savingAmountId, setSavingAmountId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -232,6 +235,35 @@ export default function MonthlyInvoicesPage() {
     }
   };
 
+  const handleSaveInvoiceAmount = async (invoice: InvoiceRow) => {
+    const amount = editingAmount.trim();
+    if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(amount)) {
+      setError('Enter a valid amount with at most two decimal places.');
+      return;
+    }
+    if (!window.confirm(`Change the amount of issued invoice ${invoice.invoice_number} from ${formatCurrency(invoice.amount)} to ${formatCurrency(Number(amount))}?`)) return;
+
+    setSavingAmountId(invoice.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch('/api/admin/fee-management/invoices/amount', {
+        method: 'PATCH',
+        headers: { ...(await getAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: invoice.id, amount }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || 'Failed to update invoice amount');
+      setEditingAmountId(null);
+      setNotice(`Invoice ${invoice.invoice_number} amount updated.`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update invoice amount');
+    } finally {
+      setSavingAmountId(null);
+    }
+  };
+
   const handleRenumber = async () => {
     if (!window.confirm('Renumber ALL invoices sequentially by billing month? Existing invoice numbers (including manual edits) will change.')) return;
     setRenumbering(true);
@@ -371,7 +403,25 @@ export default function MonthlyInvoicesPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatBillingMonth(invoice.billing_month)}</td>
                   <td className="px-4 py-4 text-sm text-[#4A4A4A]">{invoice.due_date}</td>
-                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(invoice.amount)}</td>
+                  <td className="px-4 py-4 text-sm text-[#4A4A4A]">
+                    {editingAmountId === invoice.id ? (
+                      <input
+                        aria-label={`Amount for invoice ${invoice.invoice_number}`}
+                        type="number"
+                        min="0"
+                        max="9999999999.99"
+                        step="0.01"
+                        value={editingAmount}
+                        onChange={(e) => setEditingAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && savingAmountId !== invoice.id) handleSaveInvoiceAmount(invoice);
+                          if (e.key === 'Escape' && savingAmountId !== invoice.id) setEditingAmountId(null);
+                        }}
+                        disabled={savingAmountId === invoice.id}
+                        className="w-32 rounded border border-gray-300 px-2 py-1"
+                      />
+                    ) : formatCurrency(invoice.amount)}
+                  </td>
                   <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(invoice.amount_paid)}</td>
                   <td className="px-4 py-4">
                     <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status] }}>
@@ -379,6 +429,32 @@ export default function MonthlyInvoicesPage() {
                     </span>
                   </td>
                   <td className="px-4 py-4 flex gap-2">
+                    {editingAmountId === invoice.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveInvoiceAmount(invoice)}
+                          disabled={savingAmountId === invoice.id}
+                          className="rounded-lg bg-[#16A34A] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          {savingAmountId === invoice.id ? 'Saving...' : 'Save Amount'}
+                        </button>
+                        <button
+                          onClick={() => setEditingAmountId(null)}
+                          disabled={savingAmountId === invoice.id}
+                          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-semibold text-[#4A4A4A] disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : Number(invoice.amount_paid) === 0 && ['pending', 'overdue'].includes(invoice.status) ? (
+                      <button
+                        onClick={() => { setEditingAmountId(invoice.id); setEditingAmount(String(invoice.amount)); setError(null); }}
+                        disabled={savingAmountId !== null}
+                        className="rounded-lg bg-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        Edit Amount
+                      </button>
+                    ) : null}
                     {editingInvoiceId === invoice.id ? (
                       <>
                         <button

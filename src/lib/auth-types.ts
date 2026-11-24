@@ -15,7 +15,6 @@ export type AppSession = {
   expires_at: number;
 };
 
-export type AuthResult<T> = {
-  data: T;
-  error: { message: string } | null;
-};
+export type AuthResult<T> =
+  | { data: T; error: null }
+  | { data: null; error: { message: string } };

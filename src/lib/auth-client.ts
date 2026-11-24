@@ -13,11 +13,11 @@ const request = async <T>(url: string, init?: RequestInit): Promise<AuthResult<T
       },
     });
     const result = await response.json();
-    if (!response.ok) return { data: result, error: result.error || { message: 'Authentication request failed.' } };
+    if (!response.ok) return { data: null, error: result.error || { message: 'Authentication request failed.' } };
     return { data: result, error: null };
   } catch (error) {
     return {
-      data: null as T,
+      data: null,
       error: { message: error instanceof Error ? error.message : 'Authentication request failed.' },
     };
   }
@@ -57,8 +57,10 @@ export const authClient = {
   },
   onAuthStateChange(callback: (event: string, session: AppSession | null) => void) {
     let active = true;
-    this.getSession().then(({ data }) => {
-      if (active) callback('INITIAL_SESSION', data.session);
+    this.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) console.error('Failed to retrieve initial session:', error.message);
+      callback('INITIAL_SESSION', data?.session ?? null);
     });
     return {
       data: {

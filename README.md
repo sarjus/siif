@@ -40,6 +40,12 @@ screen displays the temporary password once so it can be shared securely. An
 existing application or account with that email must be resolved first rather
 than creating a duplicate.
 
+On **Fee Management → Monthly Invoices**, an administrator can use **Edit
+Amount** to change an individual pending or overdue invoice with no recorded
+payments. This changes the issued invoice itself, not the company's fee
+configuration or other invoices. Partially paid, paid, and void invoices cannot
+be edited this way. Setting an unpaid invoice to zero marks it paid.
+
 Attendance tracking and its biometric-device integration have been removed.
 For an existing MySQL installation, back up the database and run
 [`remove_attendance_tables.sql`](./remove_attendance_tables.sql) to delete the

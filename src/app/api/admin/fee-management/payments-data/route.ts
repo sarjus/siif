@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createDatabaseClient, requireAdmin } from '@/lib/server-auth';
 import { computeInvoiceStatus } from '@/lib/fee-management';
 import { nextReceiptNumber } from '@/lib/sequential-numbers';
+import { getMysqlPool } from '@/lib/mysql';
+import type { ResultSetHeader } from 'mysql2/promise';
 
 export async function GET(request: NextRequest) {
   try {
@@ -114,13 +116,13 @@ export async function POST(request: NextRequest) {
         gracePeriodDays,
       });
 
-      const { error: updateError } = await databaseAdmin
-        .from('incubation_fee_invoices')
-        .update({ amount_paid: nextPaid, status: nextStatus })
-        .eq('id', invoiceId);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 400 });
+      const [updated] = await getMysqlPool().execute<ResultSetHeader>(
+        `UPDATE incubation_fee_invoices SET amount_paid = ?, status = ?
+         WHERE id = ? AND amount = ? AND amount_paid = ? AND status <> 'void'`,
+        [nextPaid, nextStatus, invoiceId, Number(invoice.amount), Number(invoice.amount_paid)]
+      );
+      if (updated.affectedRows === 0) {
+        return NextResponse.json({ error: 'Invoice changed while recording payment. Refresh and retry.' }, { status: 409 });
       }
     }
 
