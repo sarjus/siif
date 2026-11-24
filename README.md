@@ -65,6 +65,11 @@ For an existing database, run
 before using **Admin → Workspace Allocation**. Fresh installs already include
 the workspace tables in `mysql_schema.sql`.
 
+If a database import omitted `siif_ledger`, use the MySQL command-line client to
+apply [`reports_ledger_migration.sql`](./reports_ledger_migration.sql) to the
+imported database. The migration creates the table if missing. Import any
+historical ledger entries from the original backup separately.
+
 ## Build
 
 ```bash

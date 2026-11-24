@@ -69,16 +69,14 @@ const reports = [
   },
 ] satisfies Array<{ label: string; description: string; href: string; artwork: DashboardArtwork; palette: IconPalette; color: string }>;
 
+type ReportStats = { totalIncome: number; totalOutstanding: number; totalStaffPaid: number; netBalance: number };
+
 export default function ReportsHubPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalIncome: 0,
-    totalOutstanding: 0,
-    totalStaffPaid: 0,
-    netBalance: 0,
-  });
+  const [stats, setStats] = useState<ReportStats | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -93,20 +91,19 @@ export default function ReportsHubPage() {
           fetch('/api/admin/staff/payments', { headers }),
         ]);
 
-        if (reportsRes.ok) {
-          const p = await reportsRes.json();
-          const totalIncome = (p.collections || []).reduce((s: number, c: { amount_collected: number }) => s + Number(c.amount_collected || 0), 0);
-          const totalOutstanding = (p.invoices || []).filter((i: { status: string }) => i.status !== 'paid').reduce((s: number, i: { amount: number; amount_paid: number }) => s + Math.max(Number(i.amount || 0) - Number(i.amount_paid || 0), 0), 0);
-          let totalStaffPaid = 0;
-          if (staffRes.ok) {
-            const sp = await staffRes.json();
-            totalStaffPaid = (sp.payments || []).reduce((s: number, p: { amount: number }) => s + Number(p.amount || 0), 0);
-          }
-          setStats({ totalIncome, totalOutstanding, totalStaffPaid, netBalance: totalIncome - totalStaffPaid });
-        }
-      } catch { /* stats load failed silently */ }
+        const [reports, staff] = await Promise.all([reportsRes.json(), staffRes.json()]);
+        if (!reportsRes.ok) throw new Error(reports.error || 'Report records are unavailable.');
+        if (!staffRes.ok) throw new Error(staff.error || 'Staff payment records are unavailable.');
 
-      setLoading(false);
+        const totalIncome = (reports.collections || []).reduce((s: number, c: { amount_collected: number }) => s + Number(c.amount_collected || 0), 0);
+        const totalOutstanding = (reports.invoices || []).filter((i: { status: string }) => i.status !== 'paid').reduce((s: number, i: { amount: number; amount_paid: number }) => s + Math.max(Number(i.amount || 0) - Number(i.amount_paid || 0), 0), 0);
+        const totalStaffPaid = (staff.payments || []).reduce((s: number, p: { amount: number }) => s + Number(p.amount || 0), 0);
+        setStats({ totalIncome, totalOutstanding, totalStaffPaid, netBalance: totalIncome - totalStaffPaid });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Please refresh the page to try again.');
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, [router]);
@@ -117,7 +114,8 @@ export default function ReportsHubPage() {
   return (
     <AdminShell title="Reports" subtitle="Financial and operational reports with export options" userEmail={userEmail} onLogout={handleLogout}>
       {/* Summary strip */}
-      <div className="mb-8 grid gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
+      {error && <p role="alert" className="mb-8 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#B42318]"><FeedbackIcon kind="error" />Report totals couldn’t load. {error}</p>}
+      {stats && <div className="mb-8 grid gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
         {([
           ['Total Income', formatCurrency(stats.totalIncome), '#16A34A', ArrowDownToLine, 'finance'],
           ['Outstanding', formatCurrency(stats.totalOutstanding), '#DC2626', TrendingDown, 'payments'],
@@ -137,7 +135,7 @@ export default function ReportsHubPage() {
             </div>
           </Card>
         ))}
-      </div>
+      </div>}
 
       {/* Report cards grid */}
       <div className="mb-4 flex items-center gap-3">

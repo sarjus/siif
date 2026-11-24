@@ -23,7 +23,7 @@
 }
 
 .available { --status-color: #08654a; --status-fill: #e1f6ee; }
-.allocated { --status-color: #1e45a4; --status-fill: #e5edff; }
+.allocated { --status-color: #b42318; --status-fill: #fee2e2; }
 .reserved { --status-color: #8a4a05; --status-fill: #fff0ce; }
 .blocked { --status-color: #745b34; --status-fill: #f5eee2; }
 .shared { --status-color: #566273; --status-fill: #eef1f5; }
@@ -78,4 +78,4 @@
 .marker:disabled { cursor: default; }
 .marker:not(:disabled):hover { z-index: 2; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--status-color); }
 .marker:focus-visible, .marker[aria-pressed='true'] { z-index: 3; outline: 2px solid #172033; outline-offset: 2px; }
-.marker[data-match='true'] { z-index: 2; box-shadow: 0 0 0 2px white, 0 0 0 4px #244ac5; }
+.marker[data-match='true'] { z-index: 2; box-shadow: 0 0 0 2px white, 0 0 0 4px var(--status-color); }
