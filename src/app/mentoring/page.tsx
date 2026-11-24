@@ -1,29 +1,32 @@
 "use client";
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { Lightbulb, Network, Scale, Users } from "lucide-react";
+import { Lightbulb, Network, Scale, Users } from "@/components/icons/glyphs";
+import { ModuleIcon } from "@/components/icons/icon";
 
 const mentorTracks = [
   {
     title: "Venture Readiness",
     description:
       "Validate problem-solution fit, sharpen positioning, and build a milestone-driven execution plan.",
-    icon: <Lightbulb className="h-5 w-5" />,
+    icon: Lightbulb,
   },
   {
     title: "Go-to-Market and Growth",
     description:
       "Design customer acquisition, partnerships, and early revenue experiments suitable for student and early-stage teams.",
-    icon: <Scale className="h-5 w-5" />,
+    icon: Scale,
   },
   {
     title: "Ecosystem and Funding Connect",
     description:
       "Access curated introductions to founders, industry stakeholders, support programs, and investor networks.",
-    icon: <Network className="h-5 w-5" />,
+    icon: Network,
   },
 ];
 
@@ -130,7 +133,7 @@ export default function MentoringPage() {
                 className="group rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#E81116]/10 text-[#E81116] transition-transform duration-300 group-hover:scale-105">
-                  {track.icon}
+                  <ModuleIcon icon={track.icon} palette="innovation" />
                 </div>
                 <h2 className="font-hanken text-xl font-semibold text-black/90">{track.title}</h2>
                 <p className="mt-3 font-hanken text-[15px] leading-relaxed text-black/65">
@@ -230,7 +233,7 @@ export default function MentoringPage() {
           </div>
 
           {filteredMentors.length === 0 ? (
-            <p className="mt-10 text-center font-hanken text-lg text-black/65">
+            <p className="mt-10 text-center font-hanken text-lg text-black/65"><FeedbackIcon kind="empty" />
               No mentors available for this filter yet.
             </p>
           ) : null}

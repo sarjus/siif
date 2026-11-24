@@ -23,6 +23,7 @@
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lottie-web": "5.13.0",
     "lucide-react": "^1.7.0",
     "mysql2": "^3.24.6",
     "next": "^16.2.3",

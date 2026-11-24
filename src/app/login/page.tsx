@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+import { LockKeyhole } from '@/components/icons/glyphs';
+import { ModuleIcon } from '@/components/icons/icon';
+
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { database } from '@/lib/database';
@@ -281,6 +285,7 @@ function LoginContent() {
     >
       <div className="w-full max-w-md md:max-w-lg">
         <div className="text-center mb-8">
+          <ModuleIcon icon={LockKeyhole} className="mx-auto mb-3" />
           <h1
             className="text-3xl md:text-4xl font-semibold mb-1 tracking-tight"
             style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
@@ -359,6 +364,7 @@ function LoginContent() {
                 fontFamily: '"Hanken Grotesk", sans-serif',
               }}
             >
+              <FeedbackIcon kind="error" />
               {error}
             </div>
           )}
@@ -372,6 +378,7 @@ function LoginContent() {
                 fontFamily: '"Hanken Grotesk", sans-serif',
               }}
             >
+              <FeedbackIcon kind="success" />
               {notice}
             </div>
           )}

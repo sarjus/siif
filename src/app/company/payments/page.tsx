@@ -1,11 +1,14 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+import { ModuleIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import CompanyShell from '@/components/CompanyShell';
-import { Building2, Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from 'lucide-react';
+import { Building2, Download, IndianRupee, ReceiptText, ShieldCheck, WalletCards, type LucideIcon } from '@/components/icons/glyphs';
 import { DEPOSIT_STATUS_COLORS, downloadReceiptPdf, formatBillingMonth, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
 const BANK_DETAILS = {
@@ -167,7 +170,7 @@ export default function CompanyPaymentsPage() {
     return rows;
   }, [deposit, invoices]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <CompanyShell
@@ -176,7 +179,7 @@ export default function CompanyPaymentsPage() {
       companyName={company?.business_name || company?.email}
       onLogout={handleLogout}
     >
-        {error && <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]">{error}</div>}
+        {error && <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]"><FeedbackIcon kind="error" />{error}</div>}
         {notices.map((notice, index) => <div key={`${notice.message}-${index}`} className="mb-4 rounded-lg p-4 text-sm font-semibold text-white" style={{ backgroundColor: notice.color }}>{notice.message}</div>)}
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -194,9 +197,7 @@ export default function CompanyPaymentsPage() {
                   <p className="mb-1 text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
                   <p className="text-2xl font-bold" style={{ color }}>{value}</p>
                 </div>
-                <span className="rounded-lg bg-[#F4F6F8] p-2" style={{ color }}>
-                  <Icon className="size-5" />
-                </span>
+                <ModuleIcon icon={Icon} palette="payments" />
               </div>
             </Card>
           ))}
@@ -230,7 +231,7 @@ export default function CompanyPaymentsPage() {
             <h3 className="mb-4 text-lg font-bold text-[#172033]">Notification History</h3>
             <div className="space-y-3 max-h-[240px] overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 text-sm text-[#667085]">No notifications yet.</div>
+                <div className="rounded-lg border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 text-sm text-[#667085]"><FeedbackIcon kind="empty" />No notifications yet.</div>
               ) : notifications.map((notification) => (
                 <div key={notification.id} className="rounded-lg border border-gray-200 p-3">
                   <p className="text-sm font-semibold text-[#4A4A4A]">{notification.title}</p>
@@ -278,7 +279,7 @@ export default function CompanyPaymentsPage() {
               </thead>
               <tbody>
                 {invoices.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]">No invoices available.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]"><FeedbackIcon kind="empty" />No invoices available.</td></tr>
                 ) : invoices.map((invoice) => (
                   <tr key={invoice.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{invoice.invoice_number}</td>
@@ -305,7 +306,7 @@ export default function CompanyPaymentsPage() {
               </thead>
               <tbody>
                 {collections.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]">No payments recorded yet.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#667085]"><FeedbackIcon kind="empty" />No payments recorded yet.</td></tr>
                 ) : collections.map((collection) => (
                   <tr key={collection.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{collection.receipt_number}</td>

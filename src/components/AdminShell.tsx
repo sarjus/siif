@@ -3,26 +3,27 @@
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { ModuleIcon, NavigationIcon, type IconPalette } from '@/components/icons/icon';
 import {
   Bell,
+  BookOpenText,
+  CalendarClock,
+  ChartNoAxesCombined,
   ClipboardList,
+  ContactRound,
   CreditCard,
-  FileBarChart,
+  FileChartColumn,
   FileText,
-  Gauge,
+  HandCoins,
   Landmark,
-  LayoutDashboard,
+  LayoutGrid,
   LogOut,
+  PanelsTopLeft,
   ReceiptText,
-  Settings,
-  Users,
+  SlidersHorizontal,
+  UsersRound,
   WalletCards,
-  Banknote,
-  CalendarDays,
-  BookOpen,
-  BadgeCheck,
-  MapPinned,
-} from 'lucide-react';
+} from '@/components/icons/glyphs';
 
 type AdminShellProps = {
   title: string;
@@ -38,16 +39,16 @@ const navSections = [
   {
     title: 'Core',
     items: [
-      { label: 'Dashboard', href: '/admin/dashboard', description: 'System overview', icon: LayoutDashboard },
+      { label: 'Dashboard', href: '/admin/dashboard', description: 'System overview', icon: LayoutGrid },
       { label: 'Applications', href: '/admin/applications', description: 'Track & manage submissions', icon: ClipboardList },
-      { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts', icon: Users },
-      { label: 'Incubatee Directory', href: '/admin/incubatees', description: 'Verify incubatee profiles', icon: BadgeCheck },
+      { label: 'Reviewers', href: '/admin/reviewers', description: 'Manage reviewer accounts', icon: UsersRound },
+      { label: 'Incubatee Directory', href: '/admin/incubatees', description: 'Verify incubatee profiles', icon: ContactRound },
     ],
   },
   {
     title: 'Incubation Fees',
     items: [
-      { label: 'Fee Configuration', href: '/admin/fee-management/configuration', description: 'Set per-company fee plans', icon: Settings },
+      { label: 'Fee Configuration', href: '/admin/fee-management/configuration', description: 'Set per-company fee plans', icon: SlidersHorizontal },
       { label: 'Monthly Invoices', href: '/admin/fee-management/invoices', description: 'Invoice generation & status', icon: FileText },
     ],
   },
@@ -64,20 +65,30 @@ const navSections = [
   {
     title: 'Finance & Reports',
     items: [
-      { label: 'Overview', href: '/admin/fee-management', description: 'Fee collection dashboard', icon: Gauge },
-      { label: 'Reports', href: '/admin/reports', description: 'Financial reports hub', icon: FileBarChart },
-      { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — debit & credit', icon: BookOpen },
+      { label: 'Overview', href: '/admin/fee-management', description: 'Fee collection dashboard', icon: ChartNoAxesCombined },
+      { label: 'Reports', href: '/admin/reports', description: 'Financial reports hub', icon: FileChartColumn },
+      { label: 'Ledger', href: '/admin/ledger', description: 'General ledger — debit & credit', icon: BookOpenText },
     ],
   },
   {
     title: 'HR & Facilities',
     items: [
-      { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: Banknote },
-      { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarDays },
-      { label: 'Workspace Allocation', href: '/admin/workspace-allocations', description: 'Assign chairs and cubicles', icon: MapPinned },
+      { label: 'Staff Payments', href: '/admin/staff-payments', description: 'Salary & honorarium disbursements', icon: HandCoins },
+      { label: 'Conference Room', href: '/admin/conference', description: 'Manage room bookings', icon: CalendarClock },
+      { label: 'Workspace Allocation', href: '/admin/workspace-allocations', description: 'Assign chairs and cubicles', icon: PanelsTopLeft },
     ],
   },
 ];
+
+const modulePalettes: Record<string, IconPalette> = {
+  '/admin/applications': 'innovation', '/admin/incubatees': 'innovation',
+  '/admin/fee-management/invoices': 'payments', '/admin/fee-management/payments': 'payments',
+  '/admin/fee-management/receipts': 'payments', '/admin/fee-management/deposits': 'finance',
+  '/admin/fee-management/transactions': 'finance', '/admin/staff-payments': 'finance',
+  '/admin/fee-management': 'analytics', '/admin/reports': 'analytics', '/admin/ledger': 'documents',
+  '/admin/conference': 'events', '/admin/workspace-allocations': 'workspace',
+};
+const navItems = navSections.flatMap((section) => section.items);
 
 export default function AdminShell({
   title,
@@ -89,6 +100,8 @@ export default function AdminShell({
   headerActions,
 }: AdminShellProps) {
   const pathname = usePathname();
+  const currentModule = navItems.find(({ href }) => href === pathname)
+    ?? navItems.find(({ href }) => pathname.startsWith(`${href}/`));
 
   return (
     <div className="min-h-screen bg-[#F4F6F8] text-[#172033]" style={{ fontFamily: 'var(--font-hanken-grotesk)' }}>
@@ -113,16 +126,21 @@ export default function AdminShell({
                       <a
                         key={item.href + item.label}
                         href={item.href}
-                        className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-all ${
+                        aria-current={pathname === item.href ? 'page' : undefined}
+                        className={`group flex items-center gap-2.5 rounded-lg border px-2.5 py-2 transition-colors ${
                           active
-                            ? 'border-[#FF3B3B] bg-[#FF3B3B] text-white shadow-sm'
+                            ? 'border-[#FBD5DA] bg-[#FFF1F2] text-[#9F1239]'
                             : 'border-transparent text-[#4A5568] hover:border-[#E5E7EB] hover:bg-[#F8FAFC]'
                         }`}
                       >
-                        <Icon className={`mt-0.5 size-4 ${active ? 'text-white' : 'text-[#8A8A8A] group-hover:text-[#FF3B3B]'}`} />
+                        <span className={`grid size-8 shrink-0 place-items-center rounded-lg ring-1 ring-inset transition-colors ${
+                          active ? 'bg-[#C52936] text-white ring-[#B21C29]' : 'bg-slate-50 text-slate-600 ring-slate-200/75 group-hover:bg-white group-hover:text-[#B42332]'
+                        }`}>
+                          <NavigationIcon icon={Icon} />
+                        </span>
                         <span>
                           <span className="block text-sm font-bold">{item.label}</span>
-                          <span className={`mt-0.5 block text-[11px] ${active ? 'text-[#FFE1E1]' : 'text-[#8A8A8A]'}`}>
+                          <span className={`mt-0.5 block text-[11px] ${active ? 'text-[#9C4353]' : 'text-slate-600'}`}>
                             {item.description}
                           </span>
                         </span>
@@ -141,7 +159,7 @@ export default function AdminShell({
               onClick={onLogout}
               className="mt-4 h-9 w-full gap-2 bg-[#172033] text-white hover:bg-[#0F172A]"
             >
-              <LogOut className="size-4" />
+              <LogOut aria-hidden="true" className="size-4" strokeWidth={1.8} />
               Logout
             </Button>
           </div>
@@ -152,12 +170,15 @@ export default function AdminShell({
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 {headerPrefix}
-                <h1
-                  className="text-2xl font-bold tracking-normal md:text-3xl"
-                  style={{ color: '#D92828', fontFamily: '"Hanken Grotesk", sans-serif' }}
-                >
-                  {title}
-                </h1>
+                <div className="flex items-center gap-3">
+                  {currentModule && <ModuleIcon icon={currentModule.icon} palette={modulePalettes[currentModule.href]} />}
+                  <h1
+                    className="text-2xl font-bold tracking-normal md:text-3xl"
+                    style={{ color: '#D92828', fontFamily: '"Hanken Grotesk", sans-serif' }}
+                  >
+                    {title}
+                  </h1>
+                </div>
                 {subtitle && (
                   <p className="mt-1 max-w-3xl text-sm text-[#667085]">{subtitle}</p>
                 )}
@@ -167,7 +188,7 @@ export default function AdminShell({
                   onClick={onLogout}
                   className="h-9 gap-2 bg-[#172033] text-white hover:bg-[#0F172A] md:hidden"
                 >
-                  <LogOut className="size-4" />
+                  <LogOut aria-hidden="true" className="size-4" strokeWidth={1.8} />
                   Logout
                 </Button>
                 {headerActions}
@@ -176,18 +197,19 @@ export default function AdminShell({
           </header>
 
           <div className="mb-6 flex gap-2 overflow-x-auto pb-1 md:hidden">
-            {navSections.flatMap((section) => section.items).map((item) => {
+            {navItems.map((item) => {
               const active = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(`${item.href}/`));
               const Icon = item.icon;
               return (
                 <a
                   key={`mobile-${item.href}-${item.label}`}
                   href={item.href}
+                  aria-current={pathname === item.href ? 'page' : undefined}
                   className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${
-                    active ? 'border-[#FF3B3B] bg-[#FF3B3B] text-white' : 'border-[#E3E7EE] bg-white text-[#344054]'
+                    active ? 'border-[#FBD5DA] bg-[#FFF1F2] text-[#9F1239]' : 'border-[#E3E7EE] bg-white text-[#344054]'
                   }`}
                 >
-                  <Icon className="size-4" />
+                  <NavigationIcon icon={Icon} />
                   {item.label}
                 </a>
               );

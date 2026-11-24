@@ -1,5 +1,10 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ArrowLeft } from '@/components/icons/glyphs';
+import { ActionIcon } from '@/components/icons/icon';
+
 // ─── SIIF Reviewer Portal — Structured Assessment ────────────────────────────
 
 import { useEffect, useState, useCallback } from 'react';
@@ -415,7 +420,7 @@ export default function ReviewerApplicationPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
-      <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}>Loading…</p>
+      <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}><FeedbackIcon kind="loading" />Loading…</p>
     </div>
   );
 
@@ -428,7 +433,7 @@ export default function ReviewerApplicationPage() {
           <div>
             <button onClick={() => router.push('/reviewer/dashboard')}
               className="text-[#FF3B3B] hover:text-red-700 text-sm font-medium flex items-center gap-1 mb-1">
-              ← Back to My Reviews
+              <ArrowLeft aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} />Back to My Reviews
             </button>
             <h1 className="text-xl font-bold" style={{ color: '#1a1a1a' }}>
               {application?.business_name ?? 'Application'}
@@ -448,14 +453,14 @@ export default function ReviewerApplicationPage() {
           </div>
           <div className="flex gap-2">
             <button onClick={() => handleSave(false)} disabled={saving || !assignmentId || isSubmitted}
-              className="px-4 py-2 rounded-lg border-2 border-[#FF3B3B] text-[#FF3B3B] font-semibold text-sm hover:bg-red-50 disabled:opacity-50 transition-all">
+              className="px-4 py-2 rounded-lg border-2 border-[#FF3B3B] text-[#FF3B3B] font-semibold text-sm hover:bg-red-50 disabled:opacity-50 transition-all"><ActionIcon name="save" />
               {saving ? 'Saving…' : 'Save Draft'}
             </button>
             <button onClick={() => handleSave(true)}
               disabled={saving || !assignmentId || !review.recommendation || !review.finalComment.trim() || isSubmitted}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${isSubmitted ? 'bg-green-500 text-white cursor-default hover:bg-green-500' : 'bg-[#FF3B3B] text-white hover:bg-red-700 disabled:opacity-50'}`}
               title={isSubmitted ? 'Review already submitted' : !review.recommendation ? 'Select a recommendation to submit' : !review.finalComment.trim() ? 'Add a final comment to submit' : ''}>
-              {isSubmitted ? '✓ Submitted' : saving ? 'Submitting…' : 'Submit Final Review'}
+              {isSubmitted && <ActionIcon name="approve" />}{isSubmitted ? 'Submitted' : saving ? 'Submitting…' : 'Submit Final Review'}
             </button>
           </div>
         </div>
@@ -473,17 +478,17 @@ export default function ReviewerApplicationPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {error && (
-          <div className="mb-5 p-4 rounded-lg text-sm" style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}>{error}</div>
+          <div className="mb-5 p-4 rounded-lg text-sm" style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}><FeedbackIcon kind="error" />{error}</div>
         )}
         {submitted && (
           <div className="mb-5 p-4 rounded-lg text-sm font-medium" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700 }}>✓ Review submitted successfully!</div>
+            <div style={{ fontSize: '14px', fontWeight: 700 }}><FeedbackIcon kind="success" />Review submitted successfully!</div>
             <div style={{ fontSize: '13px', marginTop: '4px', opacity: 0.9 }}>Your assessment has been recorded and the application status is now marked as completed.</div>
           </div>
         )}
         {saved && !submitted && (
           <div className="mb-5 p-3 rounded-lg text-sm font-medium" style={{ backgroundColor: '#E3F2FD', color: '#1565C0' }}>
-            ✓ Draft saved — you can continue editing
+            <FeedbackIcon kind="success" />Draft saved — you can continue editing
           </div>
         )}
 
@@ -588,7 +593,7 @@ export default function ReviewerApplicationPage() {
             <div className="pt-2 text-center">
               <button onClick={() => setActiveTab('assessment')}
                 className="px-8 py-3 bg-[#FF3B3B] text-white rounded-lg font-semibold hover:bg-red-700 transition-all">
-                Proceed to Assessment →
+                Proceed to Assessment
               </button>
             </div>
           </div>
@@ -699,7 +704,7 @@ export default function ReviewerApplicationPage() {
                 {/* Action buttons */}
                 <div className="space-y-2">
                   <button onClick={() => handleSave(false)} disabled={saving || !assignmentId}
-                    className="w-full py-2.5 rounded-lg border-2 border-[#FF3B3B] text-[#FF3B3B] font-semibold text-sm hover:bg-red-50 disabled:opacity-50 transition-all">
+                    className="w-full py-2.5 rounded-lg border-2 border-[#FF3B3B] text-[#FF3B3B] font-semibold text-sm hover:bg-red-50 disabled:opacity-50 transition-all"><ActionIcon name="save" />
                     {saving ? 'Saving…' : 'Save Draft'}
                   </button>
                   <button onClick={() => handleSave(true)}

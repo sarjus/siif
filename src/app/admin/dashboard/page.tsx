@@ -1,85 +1,64 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
 import { useEffect, useState } from 'react';
 import { database, getSafeSession } from '@/lib/database';
 import { useRouter } from 'next/navigation';
 import AdminShell from '@/components/AdminShell';
-import {
-  Bell,
-  Banknote,
-  BadgeCheck,
-  BookOpen,
-  CalendarDays,
-  ClipboardList,
-  CreditCard,
-  FileBarChart,
-  FileText,
-  Gauge,
-  Landmark,
-  MapPinned,
-  ReceiptText,
-  Settings,
-  Users,
-  WalletCards,
-} from 'lucide-react';
+import { DashboardIcon, type DashboardArtwork, type IconPalette } from '@/components/icons/icon';
 
 type Section = {
   title: string;
   color: string;
-  bg: string;
-  items: { label: string; description: string; href: string; icon: React.ElementType }[];
+  items: { label: string; description: string; href: string; artwork: DashboardArtwork; palette: IconPalette }[];
 };
 
 const sections: Section[] = [
   {
     title: 'Core',
     color: '#DC2626',
-    bg: '#FFF7F7',
     items: [
-      { label: 'Applications', description: 'View and manage incubation applications', href: '/admin/applications', icon: ClipboardList },
-      { label: 'Reviewers', description: 'Manage reviewer accounts and access', href: '/admin/reviewers', icon: Users },
-      { label: 'Incubatee Directory', description: 'Verify and manage incubatee profiles', href: '/admin/incubatees', icon: BadgeCheck },
+      { label: 'Applications', description: 'View and manage incubation applications', href: '/admin/applications', artwork: 'applications', palette: 'innovation' },
+      { label: 'Reviewers', description: 'Manage reviewer accounts and access', href: '/admin/reviewers', artwork: 'reviewers', palette: 'general' },
+      { label: 'Incubatee Directory', description: 'Verify and manage incubatee profiles', href: '/admin/incubatees', artwork: 'directory', palette: 'innovation' },
     ],
   },
   {
     title: 'Incubation Fees',
     color: '#1D4ED8',
-    bg: '#EFF6FF',
     items: [
-      { label: 'Fee Configuration', description: 'Set per-company monthly fee plans', href: '/admin/fee-management/configuration', icon: Settings },
-      { label: 'Monthly Invoices', description: 'Invoice generation and payment status', href: '/admin/fee-management/invoices', icon: FileText },
+      { label: 'Fee Configuration', description: 'Set per-company monthly fee plans', href: '/admin/fee-management/configuration', artwork: 'configuration', palette: 'workspace' },
+      { label: 'Monthly Invoices', description: 'Invoice generation and payment status', href: '/admin/fee-management/invoices', artwork: 'invoices', palette: 'payments' },
     ],
   },
   {
     title: 'Collections',
     color: '#B45309',
-    bg: '#FFFBEB',
     items: [
-      { label: 'Record Payment', description: 'Capture incoming fee payments', href: '/admin/fee-management/payments', icon: CreditCard },
-      { label: 'Record Deposit', description: 'Manage refundable security deposits', href: '/admin/fee-management/deposits', icon: Landmark },
-      { label: 'Transactions', description: 'Full income and expenditure history', href: '/admin/fee-management/transactions', icon: WalletCards },
-      { label: 'Receipts', description: 'View, download and reprint receipts', href: '/admin/fee-management/receipts', icon: ReceiptText },
-      { label: 'Notifications', description: 'Send payment reminders to companies', href: '/admin/fee-management/notifications', icon: Bell },
+      { label: 'Record Payment', description: 'Capture incoming fee payments', href: '/admin/fee-management/payments', artwork: 'payments', palette: 'payments' },
+      { label: 'Record Deposit', description: 'Manage refundable security deposits', href: '/admin/fee-management/deposits', artwork: 'deposits', palette: 'finance' },
+      { label: 'Transactions', description: 'Full income and expenditure history', href: '/admin/fee-management/transactions', artwork: 'transactions', palette: 'finance' },
+      { label: 'Receipts', description: 'View, download and reprint receipts', href: '/admin/fee-management/receipts', artwork: 'receipts', palette: 'payments' },
+      { label: 'Notifications', description: 'Send payment reminders to companies', href: '/admin/fee-management/notifications', artwork: 'notifications', palette: 'general' },
     ],
   },
   {
     title: 'Finance & Reports',
     color: '#059669',
-    bg: '#ECFDF5',
     items: [
-      { label: 'Overview', description: 'Fee collection dashboard and summaries', href: '/admin/fee-management', icon: Gauge },
-      { label: 'Reports', description: 'Financial reports hub — 6 reports', href: '/admin/reports', icon: FileBarChart },
-      { label: 'Ledger', description: 'General ledger — track debit & credit', href: '/admin/ledger', icon: BookOpen },
+      { label: 'Overview', description: 'Fee collection dashboard and summaries', href: '/admin/fee-management', artwork: 'overview', palette: 'analytics' },
+      { label: 'Reports', description: 'Financial reports hub — 6 reports', href: '/admin/reports', artwork: 'reports', palette: 'analytics' },
+      { label: 'Ledger', description: 'General ledger — track debit & credit', href: '/admin/ledger', artwork: 'ledger', palette: 'documents' },
     ],
   },
   {
     title: 'HR & Facilities',
     color: '#7C3AED',
-    bg: '#F5F3FF',
     items: [
-      { label: 'Staff Payments', description: 'Salary and honorarium disbursements', href: '/admin/staff-payments', icon: Banknote },
-      { label: 'Conference Room', description: 'Manage room bookings and requests', href: '/admin/conference', icon: CalendarDays },
-      { label: 'Workspace Allocation', description: 'Assign chairs and cubicles to companies', href: '/admin/workspace-allocations', icon: MapPinned },
+      { label: 'Staff Payments', description: 'Salary and honorarium disbursements', href: '/admin/staff-payments', artwork: 'staff-payments', palette: 'finance' },
+      { label: 'Conference Room', description: 'Manage room bookings and requests', href: '/admin/conference', artwork: 'conference', palette: 'events' },
+      { label: 'Workspace Allocation', description: 'Assign chairs and cubicles to companies', href: '/admin/workspace-allocations', artwork: 'workspace', palette: 'workspace' },
     ],
   },
 ];
@@ -101,7 +80,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -125,29 +104,12 @@ export default function AdminDashboard() {
             {/* Icon cards grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {section.items.map((item) => {
-                const Icon = item.icon;
                 return (
                   <a
                     key={item.href}
                     href={item.href}
-                    className="group flex flex-col items-start rounded-2xl border border-[#E3E7EE] bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-md"
-                    style={{ ['--hover-shadow' as string]: `0 8px 24px ${section.color}22` }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${section.color}33`;
-                      (e.currentTarget as HTMLElement).style.borderColor = `${section.color}44`;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.boxShadow = '';
-                      (e.currentTarget as HTMLElement).style.borderColor = '';
-                    }}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 group-hover:scale-110"
-                      style={{ backgroundColor: section.bg }}
-                    >
-                      <Icon className="size-5" style={{ color: section.color }} />
-                    </div>
+                    className="flex flex-col items-start rounded-2xl border border-[#E3E7EE] bg-white p-5 shadow-sm transition-colors hover:border-slate-300">
+                    <div className="mb-4"><DashboardIcon artwork={item.artwork} palette={item.palette} /></div>
 
                     {/* Label */}
                     <p className="text-sm font-bold text-[#172033] leading-tight">{item.label}</p>
@@ -155,9 +117,8 @@ export default function AdminDashboard() {
                     {/* Description */}
                     <p className="mt-1 text-[11px] leading-relaxed text-[#8A8A8A]">{item.description}</p>
 
-                    {/* Arrow */}
                     <div className="mt-3 text-xs font-semibold transition-colors duration-200" style={{ color: section.color }}>
-                      Open →
+                      Open
                     </div>
                   </a>
                 );

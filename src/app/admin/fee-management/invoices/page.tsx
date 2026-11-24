@@ -1,9 +1,15 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon, InvoiceStatusIcon } from '@/components/icons/icon';
+import { ArrowDown, ArrowUp, ArrowUpDown } from '@/components/icons/glyphs';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import AdminShell from '@/components/AdminShell';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatBillingMonth, formatCurrency, InvoiceRecord, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
@@ -13,6 +19,10 @@ type InvoiceRow = InvoiceRecord & {
     email: string;
   } | null;
 };
+
+const toolbarButtonClass = 'h-10 w-[10.5rem] px-3 text-sm font-semibold text-white';
+const rowControlClass = 'h-10 w-32 px-3 text-sm font-semibold';
+const filterControlClass = 'h-10 rounded-lg border border-gray-300 px-4 text-sm';
 
 export default function MonthlyInvoicesPage() {
   const router = useRouter();
@@ -290,7 +300,7 @@ export default function MonthlyInvoicesPage() {
     router.push('/login');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -299,37 +309,37 @@ export default function MonthlyInvoicesPage() {
       userEmail={userEmail}
       onLogout={handleLogout}
       headerActions={
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-[33rem] flex-wrap items-center gap-2 md:justify-end">
           <input
             type="month"
             value={generateMonth}
             max={new Date().toISOString().slice(0, 7)}
             onChange={(e) => setGenerateMonth(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="h-10 w-[10.5rem] rounded-lg border border-gray-300 px-3 text-sm"
           />
-          <button onClick={handleGenerateMonth} disabled={generating} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
+          <Button onClick={handleGenerateMonth} disabled={generating} className={`${toolbarButtonClass} bg-[#FF3B3B] hover:bg-red-700`}><ActionIcon name="add" />
             {generating ? 'Generating...' : 'Generate Invoices'}
-          </button>
+          </Button>
           {invoices.some((inv) => inv.billing_month?.startsWith('2026-05')) && (
-            <button
+            <Button
               onClick={() => handleFixBillingMonth('2026-05-01', '2026-06-01')}
               disabled={fixingMonth}
-              className="rounded-lg bg-[#F59E0B] px-4 py-2 text-white font-semibold hover:bg-[#D97706] disabled:opacity-50"
+              className={`${toolbarButtonClass} bg-[#F59E0B] hover:bg-[#D97706]`}
             >
-              {fixingMonth ? 'Updating...' : 'Fix: May → June 2026'}
-            </button>
+              {fixingMonth ? 'Updating...' : 'Fix: May to June 2026'}
+            </Button>
           )}
-          <button onClick={handleRenumber} disabled={renumbering} className="rounded-lg bg-[#7C3AED] px-4 py-2 text-white font-semibold hover:bg-[#6D28D9] disabled:opacity-50">
+          <Button onClick={handleRenumber} disabled={renumbering} className={`${toolbarButtonClass} bg-[#7C3AED] hover:bg-[#6D28D9]`}><ActionIcon name="refresh" />
             {renumbering ? 'Renumbering...' : 'Renumber in Order'}
-          </button>
-          <button onClick={handleSync} disabled={syncing} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold hover:bg-[#2289b5] disabled:opacity-50">
+          </Button>
+          <Button onClick={handleSync} disabled={syncing} className={`${toolbarButtonClass} bg-[#2AA0D3] hover:bg-[#2289b5]`}><ActionIcon name="refresh" />
             {syncing ? 'Syncing...' : 'Sync Invoices'}
-          </button>
+          </Button>
         </div>
       }
     >
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
@@ -347,14 +357,20 @@ export default function MonthlyInvoicesPage() {
 
       <Card className="border-0 shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice number, company, or email" className="rounded-lg border border-gray-300 px-4 py-2" />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-gray-300 px-4 py-2">
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="partially_paid">Partially Paid</option>
-            <option value="paid">Paid</option>
-            <option value="overdue">Overdue</option>
-          </select>
+          <div className="relative min-w-0">
+            <ActionIcon name="search" className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input aria-label="Search invoices" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice number, company, or email" className={`${filterControlClass} w-full ps-9`} />
+          </div>
+          <div className="relative min-w-0">
+            <ActionIcon name="filter" className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <select aria-label="Invoice status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={`${filterControlClass} w-full ps-9`}>
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
         </div>
       </Card>
 
@@ -367,11 +383,11 @@ export default function MonthlyInvoicesPage() {
                   ['Invoice', 'invoice'], ['Company', 'company'], ['Billing Month', 'month'],
                   ['Due Date', null], ['Amount', null], ['Paid', null], ['Status', null], ['Action', null],
                 ] as const).map(([heading, key]) => (
-                  <th key={heading} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">
+                  <th key={heading} aria-sort={key && sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined} className="px-4 py-4 text-left text-sm font-semibold text-[#4A4A4A]">
                     {key ? (
                       <button onClick={() => toggleSort(key)} className="flex items-center gap-1 font-semibold hover:text-[#FF3B3B]">
                         {heading}
-                        <span className="text-xs">{sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+                        {sortKey === key ? (sortDir === 'asc' ? <ArrowUp aria-hidden="true" size={14} /> : <ArrowDown aria-hidden="true" size={14} />) : <ArrowUpDown aria-hidden="true" size={14} />}
                       </button>
                     ) : heading}
                   </th>
@@ -424,68 +440,80 @@ export default function MonthlyInvoicesPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-[#4A4A4A]">{formatCurrency(invoice.amount_paid)}</td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status] }}>
+                    <span className={`${rowControlClass} inline-flex items-center justify-center gap-1.5 rounded-lg whitespace-nowrap capitalize text-white`} style={{ backgroundColor: INVOICE_STATUS_COLORS[invoice.status] }}>
+                      <InvoiceStatusIcon status={invoice.status} />
                       {invoice.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-4 flex gap-2">
-                    {editingAmountId === invoice.id ? (
-                      <>
-                        <button
-                          onClick={() => handleSaveInvoiceAmount(invoice)}
-                          disabled={savingAmountId === invoice.id}
-                          className="rounded-lg bg-[#16A34A] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  <td className="px-4 py-4">
+                    <div className="flex min-w-[16.5rem] flex-wrap gap-2">
+                      {editingAmountId === invoice.id ? (
+                        <>
+                          <Button
+                            onClick={() => handleSaveInvoiceAmount(invoice)}
+                            disabled={savingAmountId === invoice.id}
+                            className={`${rowControlClass} bg-[#16A34A] text-white`}
+                          >
+                            <ActionIcon name="save" />
+                            {savingAmountId === invoice.id ? 'Saving...' : 'Save Amount'}
+                          </Button>
+                          <Button
+                            onClick={() => setEditingAmountId(null)}
+                            disabled={savingAmountId === invoice.id}
+                            variant="outline"
+                            className={rowControlClass}
+                          >
+                            <ActionIcon name="cancel" />
+                            Cancel
+                          </Button>
+                        </>
+                      ) : Number(invoice.amount_paid) === 0 && ['pending', 'overdue'].includes(invoice.status) ? (
+                        <Button
+                          onClick={() => { setEditingAmountId(invoice.id); setEditingAmount(String(invoice.amount)); setError(null); }}
+                          disabled={savingAmountId !== null}
+                          className={`${rowControlClass} bg-[#7C3AED] text-white hover:bg-[#6D28D9]`}
                         >
-                          {savingAmountId === invoice.id ? 'Saving...' : 'Save Amount'}
-                        </button>
-                        <button
-                          onClick={() => setEditingAmountId(null)}
-                          disabled={savingAmountId === invoice.id}
-                          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-semibold text-[#4A4A4A] disabled:opacity-50"
+                          <ActionIcon name="edit" />
+                          Edit Amount
+                        </Button>
+                      ) : null}
+                      {editingInvoiceId === invoice.id ? (
+                        <>
+                          <Button
+                            onClick={() => handleSaveInvoiceNumber(invoice)}
+                            disabled={savingInvoiceId === invoice.id}
+                            className={`${rowControlClass} bg-[#16A34A] text-white`}
+                          >
+                            <ActionIcon name="save" />
+                            {savingInvoiceId === invoice.id ? 'Saving...' : 'Save'}
+                          </Button>
+                          <Button
+                            onClick={() => setEditingInvoiceId(null)}
+                            variant="outline"
+                            className={rowControlClass}
+                          >
+                            <ActionIcon name="cancel" />
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          onClick={() => { setEditingInvoiceId(invoice.id); setEditingValue(invoice.invoice_number); }}
+                          className={`${rowControlClass} bg-[#2AA0D3] text-white hover:bg-[#2289b5]`}
                         >
-                          Cancel
-                        </button>
-                      </>
-                    ) : Number(invoice.amount_paid) === 0 && ['pending', 'overdue'].includes(invoice.status) ? (
-                      <button
-                        onClick={() => { setEditingAmountId(invoice.id); setEditingAmount(String(invoice.amount)); setError(null); }}
-                        disabled={savingAmountId !== null}
-                        className="rounded-lg bg-[#7C3AED] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                          <ActionIcon name="edit" />
+                          Edit No.
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => handleDeleteInvoice(invoice)}
+                        disabled={deletingInvoiceId === invoice.id}
+                        className={`${rowControlClass} bg-[#DC2626] text-white hover:bg-[#B91C1C]`}
                       >
-                        Edit Amount
-                      </button>
-                    ) : null}
-                    {editingInvoiceId === invoice.id ? (
-                      <>
-                        <button
-                          onClick={() => handleSaveInvoiceNumber(invoice)}
-                          disabled={savingInvoiceId === invoice.id}
-                          className="rounded-lg bg-[#16A34A] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                        >
-                          {savingInvoiceId === invoice.id ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                          onClick={() => setEditingInvoiceId(null)}
-                          className="rounded-lg bg-gray-300 px-3 py-1.5 text-xs font-semibold text-[#4A4A4A]"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => { setEditingInvoiceId(invoice.id); setEditingValue(invoice.invoice_number); }}
-                        className="rounded-lg bg-[#2AA0D3] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2289b5]"
-                      >
-                        Edit No.
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteInvoice(invoice)}
-                      disabled={deletingInvoiceId === invoice.id}
-                      className="rounded-lg bg-[#DC2626] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#B91C1C] disabled:opacity-50"
-                    >
-                      {deletingInvoiceId === invoice.id ? 'Deleting...' : 'Delete'}
-                    </button>
+                        <ActionIcon name="delete" />
+                        {deletingInvoiceId === invoice.id ? 'Deleting...' : 'Delete'}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}

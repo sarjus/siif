@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -580,9 +584,7 @@ export default function IncubationForm() {
           <div className="p-8 text-center">
             <div className="mb-4 flex justify-center">
               <div className="rounded-full bg-green-100 p-3">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <FeedbackIcon kind="success" />
               </div>
             </div>
             <h2 
@@ -808,6 +810,7 @@ export default function IncubationForm() {
                     fontSize: '14px'
                   }}
                 >
+                  <FeedbackIcon kind="success" />
                   {notice}
                 </div>
               )}
@@ -2718,6 +2721,7 @@ export default function IncubationForm() {
                     background: 'linear-gradient(90deg, #5B5B5B 0%, #8A8A8A 100%)'
                   }}
                 >
+                  <ActionIcon name="save" />
                   {submitting ? 'Please wait...' : 'Save Draft'}
                 </Button>
                 <Button

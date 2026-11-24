@@ -31,6 +31,7 @@
 .badge {
   color: var(--status-color);
   background: var(--status-fill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-color) 16%, transparent);
 }
 
 .marker {
@@ -42,11 +43,13 @@
   width: clamp(23px, 6%, 30px);
   aspect-ratio: 1;
   border: 1px solid var(--status-color);
-  border-radius: 999px;
+  border-radius: 28%;
   background: var(--status-fill);
   color: var(--status-color);
+  box-shadow: 0 1px 2px #17203325;
   font-size: 0.75rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
@@ -64,9 +67,12 @@
 .cubicleLabel {
   display: grid;
   justify-items: center;
-  border-radius: 0.4rem;
-  padding: 0.2rem 0.45rem;
+  gap: 0.1rem;
+  border: 1px solid color-mix(in srgb, var(--status-color) 26%, transparent);
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.55rem;
   background: var(--status-fill);
+  line-height: 1.15;
 }
 
 .marker:disabled { cursor: default; }

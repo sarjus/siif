@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -175,11 +179,11 @@ export default function FeeReportsPage() {
     downloadReportPdf({ title: reportTitle, headers, rows, logoDataUrl });
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Reports & Analytics" subtitle="Collection, outstanding, deposit and staff payment analysis with export options" userEmail={userEmail} onLogout={handleLogout}>
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -244,8 +248,8 @@ export default function FeeReportsPage() {
             <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <h3 className="text-lg font-bold" style={{ color: '#FF3B3B' }}>{title}</h3>
               <div className="flex gap-2">
-                <button onClick={() => exportCsv(`${String(title).toLowerCase().replace(/\s+/g, '-')}.csv`, headers as string[], rows as Array<Array<string | number>>)} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">Export Excel</button>
-                <button onClick={() => handleExportPdf(String(title), headers as string[], rows as Array<Array<string | number>>)} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">Export PDF</button>
+                <button onClick={() => exportCsv(`${String(title).toLowerCase().replace(/\s+/g, '-')}.csv`, headers as string[], rows as Array<Array<string | number>>)} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]"><ActionIcon name="export" />Export Excel</button>
+                <button onClick={() => handleExportPdf(String(title), headers as string[], rows as Array<Array<string | number>>)} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="export" />Export PDF</button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -257,7 +261,7 @@ export default function FeeReportsPage() {
                 </thead>
                 <tbody>
                   {(rows as Array<Array<string | number>>).length === 0 ? (
-                    <tr><td colSpan={(headers as string[]).length} className="px-4 py-6 text-center text-sm text-[#8A8A8A]">No data available.</td></tr>
+                    <tr><td colSpan={(headers as string[]).length} className="px-4 py-6 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No data available.</td></tr>
                   ) : (rows as Array<Array<string | number>>).map((row, rowIndex) => (
                     <tr key={`${String(title)}-${rowIndex}`} className="border-t border-gray-200">
                       {row.map((cell, cellIndex) => <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-4 text-sm text-[#4A4A4A]">{cell}</td>)}
@@ -279,7 +283,7 @@ export default function FeeReportsPage() {
                   ['Date', 'Particulars', 'Category', 'Reference', 'Debit', 'Credit', 'Balance'],
                   ledgerRows
                 )}
-                className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">
+                className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]"><ActionIcon name="export" />
                 Export Excel
               </button>
               <button
@@ -287,7 +291,7 @@ export default function FeeReportsPage() {
                   ['Date', 'Particulars', 'Category', 'Reference', 'Debit', 'Credit', 'Balance'],
                   ledgerRows
                 )}
-                className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">
+                className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="export" />
                 Export PDF
               </button>
             </div>
@@ -303,7 +307,7 @@ export default function FeeReportsPage() {
               </thead>
               <tbody>
                 {ledgerRows.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-[#8A8A8A]">No ledger entries available.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No ledger entries available.</td></tr>
                 ) : (
                   <>
                     {ledgerRows.map((row, i) => (

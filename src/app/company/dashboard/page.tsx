@@ -1,11 +1,14 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { Card } from '@/components/ui/card';
 import CompanyShell from '@/components/CompanyShell';
-import { Bell, CalendarClock, CheckCircle2, CreditCard, IndianRupee, WalletCards, type LucideIcon } from 'lucide-react';
+import { Bell, CheckCircle2, CreditCard } from '@/components/icons/glyphs';
+import { DashboardIcon, type DashboardArtwork, type IconPalette } from '@/components/icons/icon';
 import { DEPOSIT_STATUS_COLORS, formatCurrency, INVOICE_STATUS_COLORS } from '@/lib/fee-management';
 
 interface CompanyApplication {
@@ -177,7 +180,7 @@ export default function CompanyDashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}>Loading...</p>
+        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}><FeedbackIcon kind="loading" />Loading...</p>
       </div>
     );
   }
@@ -192,7 +195,7 @@ export default function CompanyDashboardPage() {
       onLogout={handleLogout}
     >
         {error && (
-          <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]">
+          <div className="mb-6 rounded-lg border border-[#FFC9C9] bg-[#FFF1F1] p-4 text-sm font-medium text-[#B42318]"><FeedbackIcon kind="error" />
             {error}
           </div>
         )}
@@ -205,20 +208,18 @@ export default function CompanyDashboardPage() {
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {([
-            ['Monthly Fee', formatCurrency(feeSummary.monthlyFee), '#FF3B3B', IndianRupee],
-            ['Outstanding Dues', formatCurrency(feeSummary.outstandingAmount), '#DC2626', CreditCard],
-            ['Overdue Invoices', String(feeSummary.overdueInvoices), '#F59E0B', CalendarClock],
-            ['Deposit Balance', formatCurrency(feeSummary.depositBalance), '#2AA0D3', WalletCards],
-          ] as Array<[string, string, string, LucideIcon]>).map(([label, value, color, Icon]) => (
+            ['Monthly Fee', formatCurrency(feeSummary.monthlyFee), '#FF3B3B', 'receipts', 'payments'],
+            ['Outstanding Dues', formatCurrency(feeSummary.outstandingAmount), '#DC2626', 'payments', 'payments'],
+            ['Overdue Invoices', String(feeSummary.overdueInvoices), '#F59E0B', 'invoices', 'payments'],
+            ['Deposit Balance', formatCurrency(feeSummary.depositBalance), '#2AA0D3', 'deposits', 'finance'],
+          ] satisfies Array<[string, string, string, DashboardArtwork, IconPalette]>).map(([label, value, color, artwork, palette]) => (
             <Card key={String(label)} className="rounded-lg border border-[#E3E7EE] bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="mb-1 text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
                   <p className="text-2xl font-bold" style={{ color }}>{value}</p>
                 </div>
-                <span className="rounded-lg bg-[#F4F6F8] p-2" style={{ color }}>
-                  <Icon className="size-5" />
-                </span>
+                <DashboardIcon artwork={artwork} palette={palette} />
               </div>
             </Card>
           ))}

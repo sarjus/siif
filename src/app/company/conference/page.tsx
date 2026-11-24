@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -133,12 +137,12 @@ export default function CompanyConferencePage() {
   });
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <CompanyShell title="Conference Room" subtitle="View bookings and request slots for SIIF conference room" companyName={companyName} onLogout={handleLogout}>
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="rounded-xl border border-[#dadce0] overflow-hidden bg-white" style={{ height: 'calc(100vh - 220px)', minHeight: '600px' }}>
         <ConferenceCalendar
@@ -155,9 +159,9 @@ export default function CompanyConferencePage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Request Booking</h3>
-              <button onClick={() => setShowForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
-            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
+            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">Purpose / Title</label>
@@ -190,7 +194,7 @@ export default function CompanyConferencePage() {
                 {submitting ? 'Submitting...' : 'Submit Request'}
               </button>
               <button onClick={() => setShowForm(false)}
-                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]">Cancel</button>
+                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]"><ActionIcon name="cancel" />Cancel</button>
             </div>
           </Card>
         </div>
@@ -202,7 +206,7 @@ export default function CompanyConferencePage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">{selected.title}</h3>
-              <button onClick={() => setSelected(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setSelected(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
             <div className="space-y-2 text-sm">
               <p><span className="font-semibold">Company:</span> {selected.applications?.business_name || '-'}</p>
@@ -217,7 +221,7 @@ export default function CompanyConferencePage() {
             </div>
             {selected.company_id === companyId && (selected.status === 'pending' || selected.status === 'approved') && (
               <button onClick={() => handleCancel(selected)} disabled={cancelling}
-                className="mt-4 w-full rounded-lg border border-[#DC2626] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FFE5E5] disabled:opacity-50">
+                className="mt-4 w-full rounded-lg border border-[#DC2626] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FFE5E5] disabled:opacity-50"><ActionIcon name="cancel" />
                 {cancelling ? 'Cancelling...' : 'Cancel Booking'}
               </button>
             )}

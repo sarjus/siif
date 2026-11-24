@@ -1,11 +1,15 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import CompanyShell from '@/components/CompanyShell';
 import { Card } from '@/components/ui/card';
-import { UserPlus } from 'lucide-react';
+import { UserPlus } from '@/components/icons/glyphs';
 
 type Incubatee = {
   id: string; company_id: string; incubatee_id: string | null;
@@ -139,7 +143,7 @@ export default function CompanyIncubatyeesPage() {
   };
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <CompanyShell title="Team Directory" subtitle="Add and manage your company's incubatee profiles"
@@ -150,8 +154,8 @@ export default function CompanyIncubatyeesPage() {
           <UserPlus className="size-4" /> Add Member
         </button>
       }>
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {incubatees.length === 0 ? (
         <Card className="border-0 shadow p-12 text-center">
@@ -188,7 +192,7 @@ export default function CompanyIncubatyeesPage() {
               </span>
               {item.status === 'pending' && (
                 <button onClick={(e) => { e.stopPropagation(); openEdit(item); }}
-                  className="text-xs text-[#FF3B3B] hover:underline font-semibold">
+                  className="text-xs text-[#FF3B3B] hover:underline font-semibold"><ActionIcon name="edit" />
                   Edit
                 </button>
               )}
@@ -203,9 +207,9 @@ export default function CompanyIncubatyeesPage() {
           <Card className="w-full max-w-2xl border-0 shadow-2xl p-6 bg-white max-h-[92vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">{editId ? 'Edit Member' : 'Add Team Member'}</h3>
-              <button onClick={() => { setShowForm(false); setEditId(null); }} className="text-[#8A8A8A] text-xl">✕</button>
+              <button onClick={() => { setShowForm(false); setEditId(null); }} className="text-[#8A8A8A] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
-            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
+            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
 
             {/* Photo upload */}
             <div className="mb-5 flex flex-col items-center gap-3">
@@ -218,7 +222,7 @@ export default function CompanyIncubatyeesPage() {
               </div>
               <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
               <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                className="rounded-lg border border-[#E3E7EE] px-4 py-1.5 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC] disabled:opacity-50">
+                className="rounded-lg border border-[#E3E7EE] px-4 py-1.5 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC] disabled:opacity-50"><ActionIcon name="upload" />
                 {uploading ? 'Uploading...' : 'Upload Photo'}
               </button>
               <p className="text-[11px] text-[#8A8A8A]">JPEG/PNG, max 2MB, passport size</p>
@@ -280,7 +284,7 @@ export default function CompanyIncubatyeesPage() {
                 {saving ? 'Saving...' : editId ? 'Update' : 'Submit for Approval'}
               </button>
               <button onClick={() => { setShowForm(false); setEditId(null); }}
-                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]">
+                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]"><ActionIcon name="cancel" />
                 Cancel
               </button>
             </div>
@@ -294,7 +298,7 @@ export default function CompanyIncubatyeesPage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Member Details</h3>
-              <button onClick={() => setViewItem(null)} className="text-[#8A8A8A] text-xl">✕</button>
+              <button onClick={() => setViewItem(null)} className="text-[#8A8A8A] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
             <div className="flex flex-col items-center gap-3 mb-5">
               <div className="h-24 w-24 rounded-full overflow-hidden bg-[#F5F6F7] border border-[#E3E7EE] flex items-center justify-center">
@@ -338,7 +342,7 @@ export default function CompanyIncubatyeesPage() {
               )}
             </div>
             <button onClick={() => setViewItem(null)}
-              className="mt-5 w-full rounded-lg bg-[#172033] px-4 py-2 text-sm font-semibold text-white">
+              className="mt-5 w-full rounded-lg bg-[#172033] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="close" />
               Close
             </button>
           </Card>

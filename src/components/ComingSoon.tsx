@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, CalendarDays, CircleHelp } from "@/components/icons/glyphs";
+import { ModuleIcon } from "@/components/icons/icon";
 
 interface ComingSoonProps {
   title: string;
   description: string;
+  category?: 'events' | 'careers';
 }
 
-const ComingSoon = ({ title, description }: ComingSoonProps) => {
+const ComingSoon = ({ title, description, category }: ComingSoonProps) => {
+  const Icon = category === 'events' ? CalendarDays : category === 'careers' ? BriefcaseBusiness : CircleHelp;
   return (
     <div className="relative min-h-[85vh] flex flex-col items-center justify-center overflow-hidden bg-white px-6 py-20">
       {/* Hexagonal Grid Background */}
@@ -62,15 +65,7 @@ const ComingSoon = ({ title, description }: ComingSoonProps) => {
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto">
-        {/* Icon Group - Matching reference image */}
-        <div className="flex items-center gap-1.5 mb-10 translate-y-[-10px]">
-            <div className="w-5 h-5 bg-[#E81116] rounded-[3px]" />
-            <div className="w-5 h-5 bg-[#1A1A1A] rounded-[3px]" />
-            <div className="w-5 h-5 bg-[#F9F1EB] rounded-[3px]" />
-            <div className="w-5 h-5 bg-[#700333] rounded-[3px]" />
-            <div className="w-5 h-5 bg-[#E81116] rounded-[3px]" />
-            <div className="w-9 h-9 ml-1.5 bg-[#E81116] rounded-[4px]" />
-        </div>
+        <ModuleIcon icon={Icon} palette={category === 'events' ? 'events' : 'general'} className="mb-10" />
 
         {/* Badge */}
         <motion.div 

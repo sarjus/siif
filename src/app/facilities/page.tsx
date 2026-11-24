@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRef, useEffect } from 'react';
+import { Building2, Coffee, Handshake, Landmark, LockKeyhole, Wifi } from '@/components/icons/glyphs';
+import { ModuleIcon } from '@/components/icons/icon';
 
 const galleryImages = [
   { src: '/assets/gallery/SIIF-Front.jpg', caption: 'SIIF Incubator Building' },
@@ -13,32 +15,32 @@ const galleryImages = [
 
 const features = [
   {
-    icon: '🏢',
+    icon: Building2,
     title: 'Dedicated Workstations',
     desc: 'Ergonomically designed private desks with high-speed internet, power backup, and secure storage for every resident startup.',
   },
   {
-    icon: '🤝',
+    icon: Handshake,
     title: 'Collaborative Spaces',
     desc: 'Open co-working zones and breakout areas designed to spark spontaneous collaboration between founders and teams.',
   },
   {
-    icon: '🏛️',
+    icon: Landmark,
     title: 'Conference & Meeting Rooms',
     desc: 'Fully equipped meeting rooms with AV setups, whiteboards, and video conferencing for client and investor meetings.',
   },
   {
-    icon: '⚡',
+    icon: Wifi,
     title: 'High-Speed Connectivity',
     desc: 'Fibre-grade internet connectivity with redundancy and dedicated bandwidth to keep your team productive 24/7.',
   },
   {
-    icon: '🔒',
+    icon: LockKeyhole,
     title: 'Secure 24×7 Access',
     desc: 'Round-the-clock access with biometric entry, CCTV surveillance, and on-site security for your peace of mind.',
   },
   {
-    icon: '☕',
+    icon: Coffee,
     title: 'Amenities & Lounge',
     desc: 'Cafeteria, recreation lounge, and wellness corner to help founders recharge between intense work sessions.',
   },
@@ -123,7 +125,7 @@ export default function FacilitiesPage() {
               className="rounded-2xl p-6 border border-gray-100 hover:border-[#FF3B3B]/30 hover:shadow-md transition-all duration-300 group"
               style={{ backgroundColor: '#FAFAFA' }}
             >
-              <span className="text-3xl mb-4 block">{f.icon}</span>
+              <ModuleIcon icon={f.icon} palette="workspace" className="mb-4" />
               <h3
                 className="text-base font-bold mb-2 group-hover:text-[#FF3B3B] transition-colors"
                 style={{ color: '#111' }}
@@ -191,7 +193,7 @@ export default function FacilitiesPage() {
           className="inline-block px-8 py-3.5 rounded-xl font-bold text-white text-sm hover:opacity-90 transition-all duration-300 shadow-lg"
           style={{ backgroundColor: '#FF3B3B', letterSpacing: '0.02em' }}
         >
-          Apply for Incubation →
+          Apply for Incubation
         </Link>
       </section>
 

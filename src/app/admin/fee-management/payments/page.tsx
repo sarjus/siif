@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -162,7 +166,7 @@ export default function RecordPaymentPage() {
     router.push('/login');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -171,8 +175,8 @@ export default function RecordPaymentPage() {
       userEmail={userEmail}
       onLogout={handleLogout}
     >
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2 border-0 shadow p-6">
@@ -223,7 +227,7 @@ export default function RecordPaymentPage() {
               <textarea value={form.remarks} onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2" rows={4} />
             </div>
           </div>
-          <button onClick={handleSubmit} disabled={saving} className="mt-4 rounded-lg bg-[#FF3B3B] px-5 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">{saving ? 'Saving...' : 'Record Payment'}</button>
+          <button onClick={handleSubmit} disabled={saving} className="mt-4 rounded-lg bg-[#FF3B3B] px-5 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50"><ActionIcon name="save" />{saving ? 'Saving...' : 'Record Payment'}</button>
         </Card>
 
         <Card className="border-0 shadow p-6">
@@ -258,7 +262,7 @@ export default function RecordPaymentPage() {
                   <span className="font-medium text-[#4A4A4A]">{String(latestReceipt.paymentMode || '')}</span>
                 </div>
               </div>
-              <button onClick={handleDownloadReceipt} className="mt-2 w-full rounded-lg bg-[#2AA0D3] px-4 py-3 font-semibold text-white hover:bg-[#2289b5]">Download Receipt PDF</button>
+              <button onClick={handleDownloadReceipt} className="mt-2 w-full rounded-lg bg-[#2AA0D3] px-4 py-3 font-semibold text-white hover:bg-[#2289b5]"><ActionIcon name="download" />Download Receipt PDF</button>
             </div>
           ) : (
             <p className="text-sm text-[#8A8A8A]">Save a payment to generate a receipt preview.</p>

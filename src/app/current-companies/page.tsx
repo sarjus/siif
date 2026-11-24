@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Building2 } from '@/components/icons/glyphs';
+import { ActionIcon, ModuleIcon } from '@/components/icons/icon';
 
 interface Company {
   id: string;
@@ -151,6 +153,7 @@ export default function CurrentCompaniesPage() {
           <p className="text-base md:text-[18px] font-medium text-[#9A9A9A] mb-4 tracking-wide">
             Our Portfolio
           </p>
+          <ModuleIcon icon={Building2} palette="workspace" className="mb-3" />
           <h1 className="text-[28px] md:text-[40px] lg:text-[48px] font-semibold leading-[1.3] tracking-tight text-[#4A4A4A] mb-6">
             Current Companies
           </h1>
@@ -255,11 +258,11 @@ export default function CurrentCompaniesPage() {
             </p>
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 text-[13px] md:text-[14px] font-medium text-[#9A9A9A]">
               <div className="flex items-start gap-3">
-                <span className="text-[#FF3B3B] text-lg">✓</span>
+                <ActionIcon name="approve" className="text-[#FF3B3B] text-lg" />
                 <span>Cutting-edge solutions across multiple sectors</span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-[#FF3B3B] text-lg">✓</span>
+                <ActionIcon name="approve" className="text-[#FF3B3B] text-lg" />
                 <span>Founded by exceptional entrepreneurs</span>
               </div>
             </div>

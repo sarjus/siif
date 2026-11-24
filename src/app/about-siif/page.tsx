@@ -8,7 +8,7 @@ import {
   Handshake,
   Target,
   CheckCircle
-} from "lucide-react";
+} from "@/components/icons/glyphs";
 
 const redColor = "#E81116";
 

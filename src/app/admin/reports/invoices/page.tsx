@@ -1,4 +1,8 @@
 'use client';
+
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon, InvoiceStatusIcon } from '@/components/icons/icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -51,12 +55,12 @@ export default function InvoiceReportPage() {
   const handleExportCsv = () => exportCsv('invoice-report.csv', ['Company', 'Billing Month', 'Amount', 'Paid', 'Outstanding', 'Status'], rows);
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Invoice Report" subtitle="All generated invoices — status, amounts and billing months" userEmail={userEmail} onLogout={handleLogout}
-      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">Export PDF</button></div>}>
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]"><ActionIcon name="export" />Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="export" />Export PDF</button></div>}>
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
 
       {/* Summary + filter */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -79,7 +83,7 @@ export default function InvoiceReportPage() {
         <div className="overflow-x-auto"><table className="w-full">
           <thead><tr style={{ backgroundColor: '#F5F6F7' }}>{['Company', 'Billing Month', 'Amount', 'Paid', 'Outstanding', 'Status'].map((h) => <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>)}</tr></thead>
           <tbody>
-            {rows.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No invoices found.</td></tr>
+            {rows.length === 0 ? <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No invoices found.</td></tr>
               : filtered.map((item, i) => {
                 const outstanding = Math.max(Number(item.amount || 0) - Number(item.amount_paid || 0), 0);
                 return (
@@ -90,7 +94,8 @@ export default function InvoiceReportPage() {
                     <td className="px-4 py-3 text-sm font-semibold text-[#16A34A]">{formatCurrency(item.amount_paid)}</td>
                     <td className="px-4 py-3 text-sm font-semibold text-[#DC2626]">{outstanding > 0 ? formatCurrency(outstanding) : '—'}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[item.status as InvoiceStatus] || '#9CA3AF' }}>
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: INVOICE_STATUS_COLORS[item.status as InvoiceStatus] || '#9CA3AF' }}>
+                        <InvoiceStatusIcon status={item.status} />
                         {item.status.replace('_', ' ')}
                       </span>
                     </td>

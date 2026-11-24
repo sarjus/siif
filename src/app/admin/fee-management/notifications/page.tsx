@@ -1,5 +1,7 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -76,12 +78,12 @@ export default function FeeNotificationsPage() {
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Notifications" subtitle="Send dashboard reminders and keep a history of communications" userEmail={userEmail} onLogout={handleLogout}>
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-1 border-0 shadow p-6">
@@ -127,7 +129,7 @@ export default function FeeNotificationsPage() {
               </thead>
               <tbody>
                 {notifications.length === 0 ? (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No notifications sent yet.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No notifications sent yet.</td></tr>
                 ) : notifications.map((n) => (
                   <tr key={n.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{new Date(n.sent_at).toLocaleString()}</td>

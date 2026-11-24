@@ -3,7 +3,8 @@
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { CreditCard, LayoutDashboard, LogOut, CalendarDays, Users } from 'lucide-react';
+import { ModuleIcon, NavigationIcon, type IconPalette } from '@/components/icons/icon';
+import { CreditCard, LayoutDashboard, LogOut, CalendarDays, Users } from '@/components/icons/glyphs';
 
 type CompanyShellProps = {
   title: string;
@@ -15,11 +16,11 @@ type CompanyShellProps = {
 };
 
 const navItems = [
-  { label: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard },
-  { label: 'Payments', href: '/company/payments', icon: CreditCard },
-  { label: 'Conference Room', href: '/company/conference', icon: CalendarDays },
-  { label: 'Team Directory', href: '/company/incubatees', icon: Users },
-];
+  { label: 'Dashboard', href: '/company/dashboard', icon: LayoutDashboard, palette: 'general' },
+  { label: 'Payments', href: '/company/payments', icon: CreditCard, palette: 'payments' },
+  { label: 'Conference Room', href: '/company/conference', icon: CalendarDays, palette: 'events' },
+  { label: 'Team Directory', href: '/company/incubatees', icon: Users, palette: 'innovation' },
+] satisfies Array<{ label: string; href: string; icon: typeof CreditCard; palette: IconPalette }>;
 
 export default function CompanyShell({
   title,
@@ -30,6 +31,7 @@ export default function CompanyShell({
   headerActions,
 }: CompanyShellProps) {
   const pathname = usePathname();
+  const currentModule = navItems.find(({ href }) => href === pathname);
 
   return (
     <div className="min-h-screen bg-[#F4F6F8] text-[#172033]" style={{ fontFamily: 'var(--font-hanken-grotesk)' }}>
@@ -38,7 +40,10 @@ export default function CompanyShell({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase text-[#8A8A8A]">SIIF Company Portal</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-normal text-[#172033] md:text-3xl">{title}</h1>
+              <div className="mt-1 flex items-center gap-3">
+                {currentModule && <ModuleIcon icon={currentModule.icon} palette={currentModule.palette} />}
+                <h1 className="text-2xl font-bold tracking-normal text-[#172033] md:text-3xl">{title}</h1>
+              </div>
               {subtitle && <p className="mt-1 max-w-2xl text-sm text-[#667085]">{subtitle}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -63,13 +68,14 @@ export default function CompanyShell({
                 <a
                   key={item.href}
                   href={item.href}
+                  aria-current={active ? 'page' : undefined}
                   className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-all ${
                     active
                       ? 'border-[#FF3B3B] bg-[#FF3B3B] text-white'
                       : 'border-[#E3E7EE] bg-white text-[#344054] hover:border-[#FF3B3B]'
                   }`}
                 >
-                  <Icon className="size-4" />
+                  <NavigationIcon icon={Icon} />
                   {item.label}
                 </a>
               );

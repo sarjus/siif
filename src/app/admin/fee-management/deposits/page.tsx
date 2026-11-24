@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -122,12 +126,12 @@ export default function RecordDepositPage() {
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Record Deposit" subtitle="Manage refundable deposit collections and refunds" userEmail={userEmail} onLogout={handleLogout}>
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-1 border-0 shadow p-6">
@@ -174,7 +178,7 @@ export default function RecordDepositPage() {
             </div>
             <input type="text" value={form.transactionReference} onChange={(e) => setForm((prev) => ({ ...prev, transactionReference: e.target.value }))} placeholder="Transaction reference" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
             <textarea value={form.remarks} onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-4 py-2" rows={4} placeholder="Remarks" />
-            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50"><ActionIcon name="save" />
               {saving ? 'Saving...' : 'Save Deposit Entry'}
             </button>
           </div>
@@ -190,7 +194,7 @@ export default function RecordDepositPage() {
               </thead>
               <tbody>
                 {deposits.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No deposit records found.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No deposit records found.</td></tr>
                 ) : deposits.map((deposit) => (
                   <tr key={deposit.id} className="border-t border-gray-200">
                     <td className="px-4 py-4 text-sm text-[#4A4A4A]">{deposit.applications?.business_name || deposit.applications?.email || '-'}</td>

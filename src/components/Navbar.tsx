@@ -5,7 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Menu, X } from "@/components/icons/glyphs";
+import { NavigationIcon } from "@/components/icons/icon";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -77,7 +78,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-black/5 bg-white/80 backdrop-blur-md">
       <div className="w-full h-auto py-4 flex items-center justify-between px-5 md:px-12 bg-white/80 backdrop-blur-md">
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Link href="/" className="flex items-center gap-2 md:gap-3">
             <Image
               src="/assets/College Logo.png"
@@ -108,15 +109,15 @@ export function Navbar() {
           </Link>
         </div>
 
-        <NavigationMenu viewport={false} className="hidden lg:flex ml-auto max-w-none">
-          <NavigationMenuList className="gap-4">
+        <NavigationMenu viewport={false} className="ml-auto hidden max-w-none min-[1440px]:flex">
+          <NavigationMenuList className="gap-2 2xl:gap-4">
             {navLinks.map((link) => (
               <NavigationMenuItem key={link.name}>
                 {link.subLinks && link.subLinks.length > 0 ? (
                   <>
                     <NavigationMenuTrigger
                       className={cn(
-                        "bg-transparent hover:bg-[#FFF5F5] hover:text-primary focus:bg-[#FFF5F5] px-4 py-2 rounded-full transition-all duration-300",
+                        "bg-transparent hover:bg-[#FFF5F5] hover:text-primary focus:bg-[#FFF5F5] px-3 py-2 rounded-full transition-all duration-300 2xl:px-4",
                         "data-[state=open]:text-primary data-[state=open]:bg-[#FFF5F5]"
                       )}
                       style={{
@@ -173,18 +174,22 @@ export function Navbar() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        <div className="hidden lg:flex ml-8">
+        <div className="ml-4 hidden shrink-0 min-[1440px]:flex 2xl:ml-8">
           <Link
             href="/apply-incubation"
-            className="px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm tracking-tight hover:bg-black transition-all duration-300 shadow-lg shadow-primary/20"
+            className="whitespace-nowrap px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm tracking-tight hover:bg-black transition-all duration-300 shadow-lg shadow-primary/20"
             style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
           >
             Apply Now
           </Link>
         </div>
 
-        <div
-          className="flex items-center lg:hidden cursor-pointer p-2 -mr-2 text-black hover:text-primary transition-colors"
+        <button
+          type="button"
+          aria-expanded={isMobileMenuOpen}
+          aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+          title={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+          className="flex cursor-pointer items-center p-2 -mr-2 text-black transition-colors hover:text-primary min-[1440px]:hidden"
           onClick={() => {
             if (isMobileMenuOpen) {
               setActiveMobileSubMenu(null);
@@ -192,19 +197,8 @@ export function Navbar() {
             setIsMobileMenuOpen(!isMobileMenuOpen);
           }}
         >
-          {isMobileMenuOpen ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="4" y1="12" x2="20" y2="12"></line>
-              <line x1="4" y1="6" x2="20" y2="6"></line>
-              <line x1="4" y1="18" x2="20" y2="18"></line>
-            </svg>
-          )}
-        </div>
+          <NavigationIcon icon={isMobileMenuOpen ? X : Menu} className="size-[22px]" />
+        </button>
       </div>
 
       {/* Mobile Menu Dropdown Overlay */}
@@ -214,7 +208,7 @@ export function Navbar() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 w-full bg-white backdrop-blur-lg border-b border-black/5 flex flex-col py-4 px-6 shadow-2xl lg:hidden z-50 max-h-[85vh] overflow-y-auto"
+            className="absolute top-full left-0 w-full bg-white backdrop-blur-lg border-b border-black/5 flex flex-col py-4 px-6 shadow-2xl min-[1440px]:hidden z-50 max-h-[85vh] overflow-y-auto"
           >
             {navLinks.map((link) => (
               <div key={link.name} className="w-full border-b border-black/5 last:border-0">

@@ -1,5 +1,8 @@
 'use client';
 
+import { FileSignature } from '@/components/icons/glyphs';
+import { ModuleIcon } from '@/components/icons/icon';
+
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
@@ -309,6 +312,7 @@ export default function IncubationProgramPage() {
                           listStyleType: 'disc',
                         }}
                       >
+                        {point.startsWith('Agreement Execution:') && <ModuleIcon icon={FileSignature} palette="documents" className="mr-2 inline size-6 align-middle" />}
                         {point}
                       </li>
                     ))}

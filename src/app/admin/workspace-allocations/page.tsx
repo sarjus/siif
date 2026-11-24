@@ -1,8 +1,15 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRightLeft, Armchair, Building2, LockKeyhole, Search, Undo2 } from 'lucide-react';
+import {
+  Armchair, ArrowRightLeft, Ban, Building2, CircleCheck, Layers2, LockKeyhole,
+  PanelsTopLeft, RotateCcw, Search, UsersRound,
+} from '@/components/icons/glyphs';
 import AdminShell from '@/components/AdminShell';
 import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth-client';
@@ -17,11 +24,13 @@ const fieldClass = 'h-10 w-full rounded-lg border border-slate-300 bg-white px-3
 const primaryClass = 'bg-[#C52929] text-white hover:bg-[#A92323]';
 const activeControlClass = 'border-slate-800 bg-slate-800 text-white hover:bg-slate-700 hover:text-white';
 const panelClass = 'rounded-xl border border-slate-200 bg-white p-4';
+const floorIcons = { general: Armchair, mezzanine: Layers2 };
+const statusIcons = { available: CircleCheck, allocated: Building2, reserved: LockKeyhole, blocked: Ban, shared: UsersRound };
 const modes = [
   { id: 'assign', label: 'Assign', icon: Armchair },
   { id: 'move', label: 'Move', icon: ArrowRightLeft },
   { id: 'reserve', label: 'Reserve', icon: LockKeyhole },
-  { id: 'release', label: 'Release', icon: Undo2 },
+  { id: 'release', label: 'Release', icon: RotateCcw },
 ] as const;
 type Mode = typeof modes[number]['id'];
 type Status = keyof typeof workspaceStatuses;
@@ -50,7 +59,9 @@ const seatLabel = (count: number) => `${count} ${count === 1 ? 'seat' : 'seats'}
 const markerPosition = ([x, y]: Marker['point']) => ({ left: `${(x - 174) / 496 * 100}%`, top: `${(y - 120) / 806 * 100}%` });
 
 function StatusBadge({ status, children }: { status: Status; children?: React.ReactNode }) {
-  return <span className={`${styles.badge} ${styles[status]} inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold`}>
+  const Icon = statusIcons[status];
+  return <span className={`${styles.badge} ${styles[status]} inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold`}>
+    <Icon aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.8} />
     {children ?? workspaceStatuses[status]}
   </span>;
 }
@@ -192,9 +203,9 @@ export default function WorkspaceAllocationsPage() {
   }[mode];
 
   return <AdminShell title="Workspace Allocation" subtitle="Assign General Layout chairs and Mezzanine cubicles to companies." userEmail={data?.userEmail} onLogout={logout}>
-    {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800">{error}</p>}
-    {notice && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{notice}</p>}
-    {loading ? <p role="status">Loading floor plans…</p> : !data ? (
+    {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-800"><FeedbackIcon kind="error" />{error}</p>}
+    {notice && <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800"><FeedbackIcon kind="success" />{notice}</p>}
+    {loading ? <p role="status"><FeedbackIcon kind="loading" />Loading floor plans…</p> : !data ? (
       <Button variant="outline" onClick={() => { setError(''); void load(); }}>Retry</Button>
     ) : <>
       <section aria-label="Floor capacity" className="mb-4 grid gap-3 sm:grid-cols-2">
@@ -215,9 +226,13 @@ export default function WorkspaceAllocationsPage() {
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(315px,0.8fr)]">
         <section id="workspace-floor-plan" aria-label="Interactive floor plan" className={`${panelClass} order-2 min-w-0 scroll-mt-24 xl:order-none`}>
           <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Select a floor">
-            {workspaceFloorIds.map((id) => <Button key={id} variant="outline" aria-pressed={floor === id}
-              className={floor === id ? activeControlClass : ''}
-              onClick={() => setFloor(id)}>{workspaceFloors[id].label}</Button>)}
+            {workspaceFloorIds.map((id) => {
+              const Icon = floorIcons[id];
+              return <Button key={id} variant="outline" aria-pressed={floor === id}
+                className={floor === id ? activeControlClass : ''} onClick={() => setFloor(id)}>
+                <Icon aria-hidden="true" strokeWidth={1.8} />{workspaceFloors[id].label}
+              </Button>;
+            })}
           </div>
           <div className="mb-3 flex flex-wrap gap-2" aria-label="Map legend">
             <StatusBadge status="available" /><StatusBadge status="allocated" />
@@ -239,7 +254,10 @@ export default function WorkspaceAllocationsPage() {
                   disabled={!isSelectable(marker)} data-match={Boolean(highlight && marker.companyId === highlight)}
                   className={`${styles.marker} ${styles[marker.status]} ${cubicleView ? styles.cubicle : ''}`}
                   style={markerPosition(marker.point)} onClick={() => toggle(marker.id)}>
-                  {cubicleView ? <span className={styles.cubicleLabel}>{marker.displayId}<small>{seatLabel(marker.capacity)}</small></span> : marker.displayId.slice(-2)}
+                  {cubicleView ? <span className={styles.cubicleLabel}>
+                    <PanelsTopLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                    {marker.displayId}<small>{seatLabel(marker.capacity)}</small>
+                  </span> : marker.displayId.slice(-2)}
                 </button>;
               })}
             </div>
@@ -265,7 +283,7 @@ export default function WorkspaceAllocationsPage() {
             <div role="group" aria-label="Allocation action" className="mb-3 flex flex-wrap gap-2">
               {modes.map(({ id, label, icon: Icon }) => <Button key={id} variant="outline" size="lg" aria-pressed={mode === id} disabled={saving}
                 className={mode === id ? activeControlClass : ''} onClick={() => changeMode(id)}>
-                <Icon aria-hidden="true" />{label}
+                <Icon aria-hidden="true" strokeWidth={1.8} />{label}
               </Button>)}
             </div>
             {mode === 'release' && <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Release type">
@@ -314,11 +332,16 @@ export default function WorkspaceAllocationsPage() {
               </Button>}
               {saving && <p role="status" className="text-sm text-slate-600">Saving changes…</p>}
             </div>
-            {(selected.length > 0 || origin.length > 0) && <Button variant="ghost" className="mt-3" disabled={saving} onClick={resetSelection}>Clear selection</Button>}
+            {(selected.length > 0 || origin.length > 0) && <Button variant="ghost" className="mt-3" disabled={saving} onClick={resetSelection}><ActionIcon name="cancel" />Clear selection</Button>}
           </section>
 
           <section aria-label="Company workspace search" className={`${panelClass} order-3`}>
-            <label htmlFor="workspace-company-search" className="mb-2 flex items-center gap-2 text-lg font-bold"><Search className="size-4" aria-hidden="true" /> Find a company</label>
+            <label htmlFor="workspace-company-search" className="mb-2 flex items-center gap-2 text-lg font-bold">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200/75">
+                <Search aria-hidden="true" className="size-[17px]" strokeWidth={1.8} />
+              </span>
+              Find a company
+            </label>
             <input id="workspace-company-search" type="search" value={query} placeholder="Search by company name"
               className={fieldClass} onChange={(event) => { setQuery(event.target.value); setHighlight(''); }} />
             {normalizedQuery && <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
@@ -329,7 +352,7 @@ export default function WorkspaceAllocationsPage() {
                   return status.status === 'allocated' && status.companyId === company.id;
                 });
                 return <div key={company.id} className="rounded-lg border border-slate-200 p-3 text-sm">
-                  <p className="flex items-center gap-2 font-bold"><Building2 className="size-4 shrink-0" aria-hidden="true" />{company.name}</p>
+                  <p className="flex items-center gap-2 font-bold"><Building2 aria-hidden="true" className="size-4 shrink-0 text-slate-600" strokeWidth={1.8} />{company.name}</p>
                   {!units.length && <p className="mt-1 text-slate-600">No allocated workspaces.</p>}
                   {workspaceFloorIds.map((id) => {
                     const floorUnits = units.filter((unit) => unit.floor === id);

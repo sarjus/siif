@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -258,7 +262,7 @@ export default function LedgerPage() {
   };
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   // Category dropdown shared between form and filter
   const CategorySelect = ({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) => (
@@ -286,7 +290,7 @@ export default function LedgerPage() {
             Manage Categories
           </button>
           <button onClick={handleExport}
-            className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3] hover:bg-[#EFF9FF]">
+            className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3] hover:bg-[#EFF9FF]"><ActionIcon name="export" />
             Export Excel
           </button>
           <button onClick={() => { setShowForm(true); setForm(emptyForm); setError(null); }}
@@ -296,8 +300,8 @@ export default function LedgerPage() {
         </div>
       }
     >
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* Summary Cards */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -347,7 +351,7 @@ export default function LedgerPage() {
               Apply
             </button>
             <button onClick={handleClearFilter}
-              className="rounded-lg border border-[#E3E7EE] px-4 py-2 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC]">
+              className="rounded-lg border border-[#E3E7EE] px-4 py-2 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC]"><ActionIcon name="cancel" />
               Clear
             </button>
           </div>
@@ -394,7 +398,7 @@ export default function LedgerPage() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1.5">
                           <button onClick={() => setViewEntry(entry)}
-                            className="rounded bg-[#2AA0D3] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#2289b5]">
+                            className="rounded bg-[#2AA0D3] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#2289b5]"><ActionIcon name="view" />
                             View
                           </button>
                           <button onClick={() => handleDelete(entry.id, entry.particulars)}
@@ -432,9 +436,9 @@ export default function LedgerPage() {
           <Card className="w-full max-w-lg border-0 shadow-2xl p-6 bg-white max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Add Ledger Entry</h3>
-              <button onClick={() => setShowForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
-            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
+            {error && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">Date <span className="text-red-500">*</span></label>
@@ -488,11 +492,11 @@ export default function LedgerPage() {
             </div>
             <div className="mt-5 flex gap-3">
               <button onClick={handleSave} disabled={saving}
-                className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"><ActionIcon name="save" />
                 {saving ? 'Saving...' : 'Save Entry'}
               </button>
               <button onClick={() => setShowForm(false)}
-                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]">
+                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]"><ActionIcon name="cancel" />
                 Cancel
               </button>
             </div>
@@ -506,7 +510,7 @@ export default function LedgerPage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Entry Details</h3>
-              <button onClick={() => setViewEntry(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setViewEntry(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
             <div className="space-y-3 text-sm">
               {[
@@ -531,11 +535,11 @@ export default function LedgerPage() {
             <div className="mt-5 flex gap-3">
               <button onClick={() => handleDelete(viewEntry.id, viewEntry.particulars)}
                 disabled={deletingId === viewEntry.id}
-                className="flex-1 rounded-lg border border-[#DC2626] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FFE5E5] disabled:opacity-50">
+                className="flex-1 rounded-lg border border-[#DC2626] px-4 py-2 text-sm font-semibold text-[#DC2626] hover:bg-[#FFE5E5] disabled:opacity-50"><ActionIcon name="delete" />
                 {deletingId === viewEntry.id ? 'Deleting...' : 'Delete Entry'}
               </button>
               <button onClick={() => setViewEntry(null)}
-                className="flex-1 rounded-lg bg-[#172033] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0F172A]">
+                className="flex-1 rounded-lg bg-[#172033] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0F172A]"><ActionIcon name="close" />
                 Close
               </button>
             </div>
@@ -549,7 +553,7 @@ export default function LedgerPage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Set Opening Balance</h3>
-              <button onClick={() => setShowOpeningBalance(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowOpeningBalance(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
             <p className="mb-4 text-sm text-[#667085]">
               The opening balance will be added as the first entry in your ledger. Use <strong>Credit</strong> if you are starting with funds available (surplus), or <strong>Debit</strong> if starting with a liability.
@@ -587,11 +591,11 @@ export default function LedgerPage() {
             </div>
             <div className="mt-5 flex gap-3">
               <button onClick={handleSaveOpeningBalance} disabled={obSaving}
-                className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"><ActionIcon name="save" />
                 {obSaving ? 'Saving...' : 'Save Opening Balance'}
               </button>
               <button onClick={() => setShowOpeningBalance(false)}
-                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]">
+                className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054]"><ActionIcon name="cancel" />
                 Cancel
               </button>
             </div>
@@ -605,7 +609,7 @@ export default function LedgerPage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white max-h-[80vh] flex flex-col">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Manage Categories</h3>
-              <button onClick={() => setShowCatManager(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowCatManager(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
 
             {catError && <div className="mb-3 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{catError}</div>}
@@ -628,13 +632,13 @@ export default function LedgerPage() {
             {/* Category list */}
             <div className="flex-1 overflow-y-auto space-y-1.5">
               {categories.length === 0 ? (
-                <p className="py-4 text-center text-sm text-[#8A8A8A]">No categories yet.</p>
+                <p className="py-4 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No categories yet.</p>
               ) : categories.map((cat) => (
                 <div key={cat.id} className="flex items-center justify-between rounded-lg border border-[#E3E7EE] bg-[#F8FAFC] px-4 py-2.5">
                   <span className="text-sm font-medium text-[#344054]">{cat.name}</span>
                   <button onClick={() => handleDeleteCategory(cat)}
                     disabled={deletingCatId === cat.id}
-                    className="text-xs font-semibold text-[#DC2626] hover:underline disabled:opacity-50">
+                    className="text-xs font-semibold text-[#DC2626] hover:underline disabled:opacity-50"><ActionIcon name="delete" />
                     {deletingCatId === cat.id ? '...' : 'Delete'}
                   </button>
                 </div>

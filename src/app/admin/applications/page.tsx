@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useEffect, useState, useCallback } from 'react';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { useRouter } from 'next/navigation';
@@ -191,11 +195,11 @@ export default function ApplicationsPage() {
     submitted: '#9A9A9A', under_review: '#2AA0D3', approved: '#4CAF50', rejected: '#F44336',
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Applications" subtitle="View and manage all incubation applications" userEmail={userEmail} onLogout={handleLogout}>
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
       {notice && (
         <div className="mb-6 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] p-4 text-sm text-[#166534]">
           <p>{notice}</p>
@@ -223,13 +227,13 @@ export default function ApplicationsPage() {
       <Card className="p-6 mb-6 border-0 shadow">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Search</label>
+            <label className="mb-1 block text-sm font-medium text-[#4A4A4A]"><ActionIcon name="search" />Search</label>
             <input type="text" placeholder="Search by name, email or business..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[#4A4A4A]">Filter by Status</label>
+            <label className="mb-1 block text-sm font-medium text-[#4A4A4A]"><ActionIcon name="filter" />Filter by Status</label>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm">
               <option value="all">All Statuses</option>
@@ -258,7 +262,7 @@ export default function ApplicationsPage() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-[#8A8A8A]">No applications found</td></tr>
+                <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No applications found</td></tr>
               ) : filtered.map((app) => (
                 <tr key={app.id} className="border-b border-[#E5E5E5] hover:bg-[#F5F6F7]">
                   <td className="px-6 py-4 text-sm font-medium text-[#4A4A4A]">{app.business_name}</td>
@@ -276,17 +280,17 @@ export default function ApplicationsPage() {
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
                       <a href={`/admin/applications/${app.id}`}
-                        className="rounded-lg bg-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700">
+                        className="rounded-lg bg-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700"><ActionIcon name="view" />
                         View
                       </a>
                       {app.status === 'approved' && (
                         <button onClick={() => openEditCompany(app)}
-                          className="rounded-lg border border-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-[#FF3B3B] hover:bg-[#FF3B3B] hover:text-white transition-all">
+                          className="rounded-lg border border-[#FF3B3B] px-4 py-1.5 text-sm font-semibold text-[#FF3B3B] hover:bg-[#FF3B3B] hover:text-white transition-all"><ActionIcon name="edit" />
                           Edit
                         </button>
                       )}
                       <button onClick={() => handleDelete(app)} disabled={deletingId === app.id}
-                        className="rounded-lg border border-[#DC2626] px-4 py-1.5 text-sm font-semibold text-[#DC2626] hover:bg-[#DC2626] hover:text-white disabled:opacity-50 transition-all">
+                        className="rounded-lg border border-[#DC2626] px-4 py-1.5 text-sm font-semibold text-[#DC2626] hover:bg-[#DC2626] hover:text-white disabled:opacity-50 transition-all"><ActionIcon name="delete" />
                         {deletingId === app.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
@@ -308,7 +312,7 @@ export default function ApplicationsPage() {
                 <p className="mt-1 text-sm text-[#777]">{editingId ? 'Changing the email also changes the company login email.' : 'The company will be marked approved and a login will be created.'}</p>
               </div>
               <button type="button" onClick={closeCompanyModal}
-                className="rounded px-2 text-2xl leading-none text-gray-500 hover:bg-gray-100" aria-label="Close">×</button>
+                className="rounded px-2 text-2xl leading-none text-gray-500 hover:bg-gray-100" aria-label="Close" title="Close"><ActionIcon name="close" /></button>
             </div>
 
             {createCompanyError && (
@@ -357,7 +361,7 @@ export default function ApplicationsPage() {
               </p>}
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={closeCompanyModal}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700">Cancel</button>
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700"><ActionIcon name="cancel" />Cancel</button>
                 <button type="submit" disabled={creatingCompany}
                   className="rounded-lg bg-[#FF3B3B] px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                   {creatingCompany ? (editingId ? 'Saving...' : 'Creating...') : (editingId ? 'Save Changes' : 'Create Company & Login')}

@@ -1,5 +1,10 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ArrowLeft, ArrowRight } from '@/components/icons/glyphs';
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { database, formatApplicationNumber, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -371,7 +376,7 @@ export default function ApplicationDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}>Loading...</p>
+        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}><FeedbackIcon kind="loading" />Loading...</p>
       </div>
     );
   }
@@ -518,7 +523,7 @@ export default function ApplicationDetail() {
       className="text-[#FF3B3B] hover:text-red-700 mb-2 flex items-center gap-2"
       style={{ fontSize: '14px', fontWeight: 500 }}
     >
-      ← Back to Dashboard
+      <ArrowLeft aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} />Back to Dashboard
     </button>
   );
 
@@ -544,6 +549,7 @@ export default function ApplicationDetail() {
         className="px-4 py-2 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2189b4]"
         style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
       >
+        <ActionIcon name="download" />
         {downloadingPdf ? 'Generating PDF...' : 'Download PDF'}
       </Button>
       <Button
@@ -552,6 +558,7 @@ export default function ApplicationDetail() {
         className="px-4 py-2 bg-white border border-[#DC2626] text-[#DC2626] rounded-lg hover:bg-[#DC2626] hover:text-white transition-all"
         style={{ fontFamily: 'var(--font-hanken-grotesk)', fontSize: '13px' }}
       >
+        <ActionIcon name="delete" />
         {deletingApplication ? 'Deleting...' : 'Delete Application'}
       </Button>
     </>
@@ -826,6 +833,7 @@ export default function ApplicationDetail() {
               fontSize: '14px'
             }}
           >
+            <FeedbackIcon kind="error" />
             {error}
           </div>
         )}
@@ -840,6 +848,7 @@ export default function ApplicationDetail() {
               fontSize: '14px',
             }}
           >
+            <FeedbackIcon kind="success" />
             {notice}
           </div>
         )}
@@ -1063,7 +1072,7 @@ export default function ApplicationDetail() {
 
               {/* Currently assigned reviewers */}
               {assignments.length === 0 ? (
-                <p style={{ fontSize: '13px', color: '#8A8A8A', marginBottom: '12px' }}>
+                <p style={{ fontSize: '13px', color: '#8A8A8A', marginBottom: '12px' }}><FeedbackIcon kind="empty" />
                   No reviewers assigned yet.
                 </p>
               ) : (
@@ -1141,7 +1150,7 @@ export default function ApplicationDetail() {
                               </button>
                             )}
                             <button onClick={() => handleRemoveAssignment(a.id)}
-                              style={{ fontSize: '11px', color: '#F44336', fontWeight: 600 }}>
+                              style={{ fontSize: '11px', color: '#F44336', fontWeight: 600 }}><ActionIcon name="delete" />
                               Remove
                             </button>
                           </div>
@@ -1195,8 +1204,8 @@ export default function ApplicationDetail() {
                                   </p>
                                   {fb.strengths && <p style={{ fontSize: '12px', color: '#2E7D32' }}><strong>+</strong> {fb.strengths}</p>}
                                   {fb.weaknesses && <p style={{ fontSize: '12px', color: '#C62828' }}><strong>−</strong> {fb.weaknesses}</p>}
-                                  {fb.risks && <p style={{ fontSize: '12px', color: '#E65100' }}><strong>⚠</strong> {fb.risks}</p>}
-                                  {fb.suggestions && <p style={{ fontSize: '12px', color: '#1565C0' }}><strong>→</strong> {fb.suggestions}</p>}
+                                  {fb.risks && <p style={{ fontSize: '12px', color: '#E65100' }}><ActionIcon name="warning" /> {fb.risks}</p>}
+                                  {fb.suggestions && <p style={{ fontSize: '12px', color: '#1565C0' }}><ArrowRight aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} /> {fb.suggestions}</p>}
                                 </div>
                               );
                             })}
@@ -1298,6 +1307,7 @@ export default function ApplicationDetail() {
                 className="w-full px-4 py-3 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
               >
+                <ActionIcon name="save" />
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </Card>
@@ -1364,6 +1374,7 @@ export default function ApplicationDetail() {
                 className="w-full px-4 py-3 bg-[#2AA0D3] text-white rounded-lg hover:bg-[#2289b5] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 style={{ fontFamily: '"Hanken Grotesk", sans-serif' }}
               >
+                <ActionIcon name="approve" />
                 {recreatingCompanyLogin
                   ? 'Recreating...'
                   : isCompanyAccessEligible

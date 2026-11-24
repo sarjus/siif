@@ -1,5 +1,8 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+import { ActionIcon, DashboardIcon, ModuleIcon, type DashboardArtwork, type IconPalette } from '@/components/icons/icon';
+
 import { useEffect, useState } from 'react';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { useRouter } from 'next/navigation';
@@ -10,64 +13,61 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart3,
-  BookOpen,
-  Building2,
   CircleDollarSign,
-  FileText,
   TrendingDown,
-  Users,
-} from 'lucide-react';
+  type LucideIcon,
+} from '@/components/icons/glyphs';
 
 const reports = [
   {
     label: 'Collection Report',
     description: 'All fee payments received — monthly fees and deposits',
     href: '/admin/reports/collection',
-    icon: ArrowDownToLine,
+    artwork: 'transactions',
+    palette: 'finance',
     color: '#16A34A',
-    bg: '#ECFDF5',
   },
   {
     label: 'Outstanding Report',
     description: 'Unpaid and partially paid invoices with balances due',
     href: '/admin/reports/outstanding',
-    icon: TrendingDown,
+    artwork: 'receipts',
+    palette: 'payments',
     color: '#DC2626',
-    bg: '#FFF7F7',
   },
   {
     label: 'Deposit Report',
     description: 'Refundable security deposits — collected, refunded, balance',
     href: '/admin/reports/deposits',
-    icon: Building2,
+    artwork: 'deposits',
+    palette: 'finance',
     color: '#2AA0D3',
-    bg: '#EFF9FF',
   },
   {
     label: 'Staff Payments Report',
     description: 'Salary and honorarium disbursements to staff',
     href: '/admin/reports/staff-payments',
-    icon: Users,
+    artwork: 'staff-payments',
+    palette: 'finance',
     color: '#7C3AED',
-    bg: '#F5F3FF',
   },
   {
     label: 'Ledger Report',
     description: 'Full general ledger with running debit/credit balance',
     href: '/admin/reports/ledger',
-    icon: BookOpen,
+    artwork: 'ledger',
+    palette: 'documents',
     color: '#0F766E',
-    bg: '#F0FDFA',
   },
   {
     label: 'Invoice Report',
     description: 'All invoices generated — status, amounts, billing months',
     href: '/admin/reports/invoices',
-    icon: FileText,
+    artwork: 'invoices',
+    palette: 'payments',
     color: '#1D4ED8',
-    bg: '#EFF6FF',
   },
-];
+] satisfies Array<{ label: string; description: string; href: string; artwork: DashboardArtwork; palette: IconPalette; color: string }>;
 
 export default function ReportsHubPage() {
   const router = useRouter();
@@ -112,23 +112,21 @@ export default function ReportsHubPage() {
   }, [router]);
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Reports" subtitle="Financial and operational reports with export options" userEmail={userEmail} onLogout={handleLogout}>
       {/* Summary strip */}
-      <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="mb-8 grid gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
         {([
-          ['Total Income', formatCurrency(stats.totalIncome), '#16A34A', ArrowDownToLine],
-          ['Outstanding', formatCurrency(stats.totalOutstanding), '#DC2626', TrendingDown],
-          ['Staff Payments', formatCurrency(stats.totalStaffPaid), '#7C3AED', ArrowUpFromLine],
-          ['Net Position', formatCurrency(Math.abs(stats.netBalance)), stats.netBalance >= 0 ? '#16A34A' : '#DC2626', CircleDollarSign],
-        ] as [string, string, string, React.ElementType][]).map(([label, value, color, Icon]) => (
-          <Card key={String(label)} className="border-0 shadow p-5 flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5F6F7]">
-              <Icon className="size-5" style={{ color }} />
-            </div>
-            <div>
+          ['Total Income', formatCurrency(stats.totalIncome), '#16A34A', ArrowDownToLine, 'finance'],
+          ['Outstanding', formatCurrency(stats.totalOutstanding), '#DC2626', TrendingDown, 'payments'],
+          ['Staff Payments', formatCurrency(stats.totalStaffPaid), '#7C3AED', ArrowUpFromLine, 'finance'],
+          ['Net Position', formatCurrency(Math.abs(stats.netBalance)), stats.netBalance >= 0 ? '#16A34A' : '#DC2626', CircleDollarSign, 'analytics'],
+        ] satisfies Array<[string, string, string, LucideIcon, IconPalette]>).map(([label, value, color, Icon, palette]) => (
+          <Card key={label} className="flex flex-row items-start gap-3 rounded-2xl border border-[#E3E7EE] bg-white p-4 shadow-sm">
+            <ModuleIcon icon={Icon} palette={palette} />
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase text-[#8A8A8A]">{label}</p>
               <p className="text-xl font-bold" style={{ color }}>{value}</p>
               {label === 'Net Position' && (
@@ -143,39 +141,25 @@ export default function ReportsHubPage() {
 
       {/* Report cards grid */}
       <div className="mb-4 flex items-center gap-3">
-        <BarChart3 className="size-5 text-[#FF3B3B]" />
+        <ModuleIcon icon={BarChart3} palette="analytics" className="size-8" />
         <h2 className="text-lg font-bold text-[#172033]">Available Reports</h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {reports.map((report) => {
-          const Icon = report.icon;
-          return (
-            <a
-              key={report.href}
-              href={report.href}
-              className="group flex flex-col rounded-2xl border border-[#E3E7EE] bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = `${report.color}44`;
-                (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px ${report.color}22`;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor = '';
-                (e.currentTarget as HTMLElement).style.boxShadow = '';
-              }}
-            >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
-                style={{ backgroundColor: report.bg }}>
-                <Icon className="size-6" style={{ color: report.color }} />
-              </div>
-              <h3 className="mb-1 text-base font-bold text-[#172033]">{report.label}</h3>
-              <p className="mb-4 text-sm text-[#8A8A8A] leading-relaxed flex-1">{report.description}</p>
-              <div className="text-sm font-semibold transition-colors" style={{ color: report.color }}>
-                View Report →
-              </div>
-            </a>
-          );
-        })}
+        {reports.map((report) => (
+          <a
+            key={report.href}
+            href={report.href}
+            className="flex flex-col rounded-2xl border border-[#E3E7EE] bg-white p-6 shadow-sm transition-colors hover:border-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500"
+          >
+            <div className="mb-4"><DashboardIcon artwork={report.artwork} palette={report.palette} /></div>
+            <h3 className="mb-1 text-base font-bold text-[#172033]">{report.label}</h3>
+            <p className="mb-4 flex-1 text-sm leading-relaxed text-[#8A8A8A]">{report.description}</p>
+            <div className="text-sm font-semibold" style={{ color: report.color }}>
+              <ActionIcon name="view" />View Report
+            </div>
+          </a>
+        ))}
       </div>
     </AdminShell>
   );

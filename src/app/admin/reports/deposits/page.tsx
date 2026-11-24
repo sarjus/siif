@@ -1,4 +1,8 @@
 'use client';
+
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -41,12 +45,12 @@ export default function DepositReportPage() {
   const handleExportCsv = () => exportCsv('deposit-report.csv', ['Company', 'Deposit', 'Collected', 'Refunded', 'Balance', 'Status'], rows);
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Deposit Report" subtitle="Refundable security deposits — collected, refunded and balance" userEmail={userEmail} onLogout={handleLogout}
-      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">Export PDF</button></div>}>
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]"><ActionIcon name="export" />Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="export" />Export PDF</button></div>}>
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
       <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
         {[['Total Deposit', totals.deposit, '#1D4ED8'], ['Total Collected', totals.collected, '#16A34A'], ['Total Refunded', totals.refunded, '#F59E0B'], ['Balance Remaining', totals.balance, '#2AA0D3']].map(([l, v, c]) => (
           <Card key={String(l)} className="border-0 shadow p-5"><p className="text-xs font-bold uppercase text-[#8A8A8A]">{l}</p><p className="text-xl font-bold" style={{ color: String(c) }}>{formatCurrency(Number(v))}</p></Card>

@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useEffect, useState, useCallback } from 'react';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
 import { useRouter } from 'next/navigation';
@@ -117,7 +121,7 @@ export default function ReviewersPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}>Loading...</p>
+        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}><FeedbackIcon kind="loading" />Loading...</p>
       </div>
     );
   }
@@ -145,6 +149,7 @@ export default function ReviewersPage() {
             className="mb-6 p-4 rounded-lg text-sm"
             style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}
           >
+            <FeedbackIcon kind="error" />
             {error}
           </div>
         )}
@@ -208,6 +213,7 @@ export default function ReviewersPage() {
                     className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
                     style={{ color: '#4A4A4A' }}
                   >
+                    <ActionIcon name="cancel" />
                     Cancel
                   </button>
                 </div>
@@ -334,6 +340,7 @@ export default function ReviewersPage() {
                             href={`/admin/reviewers/${r.id}`}
                             className="px-3 py-1 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 text-xs font-semibold"
                           >
+                            <ActionIcon name="view" />
                             View
                           </a>
                           <button

@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -96,11 +100,11 @@ export default function ReceiptsPage() {
     router.push('/login');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Receipts" subtitle="Download, print, and reprint payment receipts" userEmail={userEmail} onLogout={handleLogout}>
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
 
       {/* Search + Filter — same style as invoice page */}
       <Card className="border-0 shadow p-6 mb-6">
@@ -168,6 +172,7 @@ export default function ReceiptsPage() {
                         onClick={() => handleDownload(collection)}
                         className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2289b5]"
                       >
+                        <ActionIcon name="download" />
                         Download
                       </button>
                     </td>

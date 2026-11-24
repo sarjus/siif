@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -169,7 +173,7 @@ export default function FeeConfigurationPage() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
   }
 
   return (
@@ -179,8 +183,8 @@ export default function FeeConfigurationPage() {
       userEmail={userEmail}
       onLogout={handleLogout}
     >
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-1 border-0 shadow p-6">
@@ -223,7 +227,7 @@ export default function FeeConfigurationPage() {
               Number(form.monthlyFee) !== Number(form.originalMonthlyFee) && (
               <div className="rounded-lg border border-[#F59E0B] bg-[#FFFBEB] p-4 space-y-3">
                 <p className="text-sm font-bold text-[#92400E]">
-                  ⚠ Fee changed from {formatCurrency(Number(form.originalMonthlyFee))} → {formatCurrency(Number(form.monthlyFee))}
+                  <ActionIcon name="warning" />Fee changed from {formatCurrency(Number(form.originalMonthlyFee))} to {formatCurrency(Number(form.monthlyFee))}
                 </p>
                 <div>
                   <label className="block mb-1 text-sm font-medium text-[#92400E]">
@@ -314,7 +318,7 @@ export default function FeeConfigurationPage() {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="w-full rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50"><ActionIcon name="save" />
               {saving ? 'Saving...' : form.companyId && companySettings[form.companyId] ? 'Update Configuration' : 'Save Configuration'}
             </button>
           </div>
@@ -354,6 +358,7 @@ export default function FeeConfigurationPage() {
                           className="rounded px-3 py-1 text-xs font-semibold text-white"
                           style={{ backgroundColor: '#FF3B3B' }}
                         >
+                          <ActionIcon name="edit" />
                           Edit
                         </button>
                       </td>

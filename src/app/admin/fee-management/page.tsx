@@ -1,5 +1,7 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -215,7 +217,7 @@ export default function FeeManagementOverviewPage() {
       }))
     : [];
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -230,8 +232,8 @@ export default function FeeManagementOverviewPage() {
         </button>
       }
     >
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4 mb-6">
@@ -266,7 +268,7 @@ export default function FeeManagementOverviewPage() {
         <Card className="border-0 shadow p-6">
           <h3 className="mb-4 text-sm font-bold uppercase text-[#8A8A8A]">Monthly Collections (Last 6 Months)</h3>
           {monthlyBarData.every((b) => b.value === 0) ? (
-            <div className="flex h-40 items-center justify-center text-sm text-[#8A8A8A]">No collection data yet</div>
+            <div className="flex h-40 items-center justify-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No collection data yet</div>
           ) : (
             <BarChart
               bars={monthlyBarData}
@@ -288,7 +290,7 @@ export default function FeeManagementOverviewPage() {
               colors={{ paid: '#16A34A', outstanding: '#F59E0B' }}
             />
           ) : (
-            <div className="flex h-24 items-center justify-center text-sm text-[#8A8A8A]">No data yet</div>
+            <div className="flex h-24 items-center justify-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No data yet</div>
           )}
         </Card>
 
@@ -296,7 +298,7 @@ export default function FeeManagementOverviewPage() {
         <Card className="border-0 shadow p-6">
           <h3 className="mb-4 text-sm font-bold uppercase text-[#8A8A8A]">Collection Type Breakdown</h3>
           {collectionTypeData.length === 0 ? (
-            <div className="flex h-24 items-center justify-center text-sm text-[#8A8A8A]">No data yet</div>
+            <div className="flex h-24 items-center justify-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No data yet</div>
           ) : (
             <DonutChart
               data={collectionTypeData}

@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -186,7 +190,7 @@ export default function TransactionsPage() {
 
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   const totalStaffPaid = staffPayments.reduce((s, p) => s + Number(p.amount || 0), 0);
 
@@ -198,12 +202,12 @@ export default function TransactionsPage() {
       onLogout={handleLogout}
       headerActions={
         activeTab === 'receipts'
-          ? <button onClick={exportTransactions} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold text-sm">Export CSV</button>
-          : <button onClick={exportStaffPayments} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold text-sm">Export CSV</button>
+          ? <button onClick={exportTransactions} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold text-sm"><ActionIcon name="export" />Export CSV</button>
+          : <button onClick={exportStaffPayments} className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-white font-semibold text-sm"><ActionIcon name="export" />Export CSV</button>
       }
     >
-      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-6 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-6 rounded-lg bg-[#EAF9F0] p-4 text-sm text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2 border-b border-[#E3E7EE]">
@@ -276,7 +280,7 @@ export default function TransactionsPage() {
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No transactions found.</td></tr>
+                    <tr><td colSpan={10} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No transactions found.</td></tr>
                   ) : filtered.map((t) => (
                     <tr key={t.id} className="border-t border-gray-200">
                       <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{t.receipt_number}</td>
@@ -291,8 +295,8 @@ export default function TransactionsPage() {
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-2">
                           <button onClick={() => downloadReceiptPdf({ receiptNumber: t.receipt_number, receiptDate: t.collection_date, companyName: t.applications?.business_name || t.applications?.email || 'Company', collectionType: t.collection_type.replace(/_/g, ' '), invoiceNumber: t.incubation_fee_invoices?.invoice_number || null, billingMonth: t.incubation_fee_invoices?.billing_month ? formatBillingMonth(t.incubation_fee_invoices.billing_month) : null, depositReference: t.deposit_id, amountPaid: t.amount_collected, paymentMode: t.payment_mode.replace(/_/g, ' '), transactionReference: t.transaction_reference || null, receivedBy: t.collected_by || null })} className="rounded-lg bg-[#2AA0D3] px-3 py-1 text-xs font-semibold text-white">Receipt</button>
-                          <button onClick={() => startEdit(t)} className="rounded-lg border border-[#FF3B3B] px-3 py-1 text-xs font-semibold text-[#FF3B3B]">Edit</button>
-                          <button onClick={() => handleDelete(t)} className="rounded-lg border border-[#D32F2F] px-3 py-1 text-xs font-semibold text-[#D32F2F]">Delete</button>
+                          <button onClick={() => startEdit(t)} className="rounded-lg border border-[#FF3B3B] px-3 py-1 text-xs font-semibold text-[#FF3B3B]"><ActionIcon name="edit" />Edit</button>
+                          <button onClick={() => handleDelete(t)} className="rounded-lg border border-[#D32F2F] px-3 py-1 text-xs font-semibold text-[#D32F2F]"><ActionIcon name="delete" />Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -343,7 +347,7 @@ export default function TransactionsPage() {
                 </thead>
                 <tbody>
                   {filteredPayments.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No staff payments recorded yet.</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No staff payments recorded yet.</td></tr>
                   ) : filteredPayments.map((p) => (
                     <tr key={p.id} className="border-t border-gray-200">
                       <td className="px-4 py-4 text-sm font-semibold text-[#4A4A4A]">{p.payment_number}</td>
@@ -385,8 +389,8 @@ export default function TransactionsPage() {
               <input type="text" value={editForm.transaction_reference} onChange={(e) => setEditForm((prev) => ({ ...prev, transaction_reference: e.target.value }))} placeholder="Transaction reference" className="w-full rounded-lg border border-gray-300 px-4 py-2" />
               <textarea value={editForm.remarks} onChange={(e) => setEditForm((prev) => ({ ...prev, remarks: e.target.value }))} rows={4} className="w-full rounded-lg border border-gray-300 px-4 py-2" />
               <div className="flex gap-3">
-                <button onClick={saveEdit} className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white">Save Changes</button>
-                <button onClick={() => setEditing(null)} className="flex-1 rounded-lg border border-gray-300 px-4 py-3 font-semibold text-[#4A4A4A]">Cancel</button>
+                <button onClick={saveEdit} className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-3 font-semibold text-white"><ActionIcon name="save" />Save Changes</button>
+                <button onClick={() => setEditing(null)} className="flex-1 rounded-lg border border-gray-300 px-4 py-3 font-semibold text-[#4A4A4A]"><ActionIcon name="cancel" />Cancel</button>
               </div>
             </div>
           </div>

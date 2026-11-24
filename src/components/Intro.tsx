@@ -1,5 +1,8 @@
 'use client';
 
+import { BriefcaseBusiness } from '@/components/icons/glyphs';
+import { ModuleIcon } from '@/components/icons/icon';
+
 export function Intro() {
   return (
     <>
@@ -96,7 +99,7 @@ export function Intro() {
           <div className="rounded-[26px] p-[4px] bg-linear-to-r from-[#F3F3F3] via-[#FFFFFF] to-[#F7F7F7] shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <div className="rounded-[22px] bg-[#F8F8F8] px-[20px] py-[14px] md:px-[28px] md:py-[18px] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-[#ECECEC]">
               <div className="flex items-start gap-3">
-                <span className="mt-[2px] inline-flex h-[40px] w-[5px] shrink-0 rounded-full bg-linear-to-b from-[#F12837] to-[#B40591] shadow-[0_6px_14px_rgba(241,40,55,0.24)]" />
+                <ModuleIcon icon={BriefcaseBusiness} palette="innovation" />
                 <p className="text-[14px] md:text-[16px] text-[#5C5C5C] leading-relaxed">
                   Applications for the current incubation batch are now open. Priority review closes on <span className="font-semibold text-[#F12837]">30 June</span>.
                 </p>

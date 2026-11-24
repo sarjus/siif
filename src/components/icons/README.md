@@ -1,0 +1,11 @@
+# SIIF icons
+
+- `glyphs.ts` is the local entry point for Lucide SVG glyphs. Use `NavigationIcon` for sidebar and navigation glyphs and `ActionIcon` for inline actions. Give icon-only controls an accessible name and a title.
+- `ModuleIcon` pairs Lucide linework with the shared duotone palette. `DashboardIcon` displays reusable local illustrations from `public/assets/icons/dashboard` at 56px.
+- `FeedbackIcon` has a static SVG fallback and loads optional one-shot Lottie feedback from `public/assets/animations`. It respects the operating system's reduced-motion setting.
+
+Lucide and Lottie retain their upstream licenses. The dashboard illustrations were created for SIIF with the built-in ImageGen tool, then exported as transparent 112px WebP files for 2× displays. The Lottie illustrations use original vector shapes.
+
+## Dashboard illustration prompt
+
+Use case: stylized-concept. Create one production sprite sheet for a premium enterprise incubator SaaS dashboard, exactly a 4 column x 4 row grid on a completely transparent background, no text or dividing lines. Each icon in its own equal square cell, centered with at least 15% clear safe space to all cell edges. Consistent soft 3D ceramic/plastic style, front three-quarter view with slight right-facing depth, soft top-left studio lighting, understated shadows, and highly recognizable forms at 56px. Each cell has its own self-contained silhouette, absolutely no shared base, people, accessories sticking past cells or background. Row 1 left to right: violet application clipboard, indigo two-person reviewer badge, violet contact ID card, blue sliders/settings panel. Row 2: amber invoice document, amber payment credit card, green savings deposit bank, green financial transactions wallet. Row 3: amber receipt ticket, indigo notification bell, cyan analytics chart, cyan reports folder with chart. Row 4: slate ledger book, green staff payment coins, pink conference calendar, blue office floor plan with partition walls. Palette accents #6366F1 #8B5CF6 #3B82F6 #10B981 #F59E0B #64748B #EC4899 #06B6D4, soft pastel secondary surfaces. No letters, numerals, labels, outlines at cell edges, checkerboard pattern or backdrop. Square canvas.

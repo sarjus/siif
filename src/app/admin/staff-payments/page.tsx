@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -226,7 +230,7 @@ export default function StaffPaymentsPage() {
     router.push('/login');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -251,8 +255,8 @@ export default function StaffPaymentsPage() {
         </div>
       }
     >
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* Summary card */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -281,6 +285,7 @@ export default function StaffPaymentsPage() {
             onClick={() => handleDownloadSlip(latestSlip)}
             className="rounded-lg bg-[#2AA0D3] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2289b5]"
           >
+            <ActionIcon name="download" />
             Download Payment Slip
           </button>
         </Card>
@@ -324,7 +329,7 @@ export default function StaffPaymentsPage() {
                 </thead>
                 <tbody>
                   {filteredPayments.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No payments recorded yet.</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No payments recorded yet.</td></tr>
                   ) : filteredPayments.map((p) => (
                     <tr key={p.id} className="border-t border-gray-200">
                       <td className="px-4 py-3 text-sm font-semibold text-[#4A4A4A]">{p.payment_number}</td>
@@ -383,7 +388,7 @@ export default function StaffPaymentsPage() {
               </thead>
               <tbody>
                 {staff.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No staff added yet.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No staff added yet.</td></tr>
                 ) : staff.map((s) => (
                   <tr key={s.id} className="border-t border-gray-200">
                     <td className="px-4 py-3 text-sm font-semibold text-[#4A4A4A]">{s.name}</td>
@@ -409,6 +414,7 @@ export default function StaffPaymentsPage() {
                         }}
                         className="rounded-lg bg-[#FF3B3B] px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
                       >
+                        <ActionIcon name="edit" />
                         Edit
                       </button>
                     </td>
@@ -426,9 +432,9 @@ export default function StaffPaymentsPage() {
           <Card className="w-full max-w-lg border-0 shadow-2xl p-6 bg-white max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">Record Payment</h3>
-              <button onClick={() => setShowPayForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowPayForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
-            {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
+            {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">Staff Member</label>
@@ -519,12 +525,14 @@ export default function StaffPaymentsPage() {
                 disabled={saving}
                 className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
+                <ActionIcon name="save" />
                 {saving ? 'Saving...' : 'Record & Generate Slip'}
               </button>
               <button
                 onClick={() => setShowPayForm(false)}
                 className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC]"
               >
+                <ActionIcon name="cancel" />
                 Cancel
               </button>
             </div>
@@ -538,9 +546,9 @@ export default function StaffPaymentsPage() {
           <Card className="w-full max-w-lg border-0 shadow-2xl p-6 bg-white max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">{staffForm.id ? 'Edit Staff' : 'Add Staff'}</h3>
-              <button onClick={() => setShowStaffForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setShowStaffForm(false)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
-            {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]">{error}</div>}
+            {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-3 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
             <div className="space-y-4">
               {[
                 ['Name', 'name', 'text', 'e.g. John Thomas'],
@@ -607,12 +615,14 @@ export default function StaffPaymentsPage() {
                 disabled={saving}
                 className="flex-1 rounded-lg bg-[#FF3B3B] px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
               >
+                <ActionIcon name="add" />
                 {saving ? 'Saving...' : staffForm.id ? 'Update Staff' : 'Add Staff'}
               </button>
               <button
                 onClick={() => setShowStaffForm(false)}
                 className="rounded-lg border border-[#E3E7EE] px-4 py-2.5 text-sm font-semibold text-[#344054] hover:bg-[#F8FAFC]"
               >
+                <ActionIcon name="cancel" />
                 Cancel
               </button>
             </div>

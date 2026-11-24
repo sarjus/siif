@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Mail, Phone } from "@/components/icons/glyphs";
 
 export const Footer = () => {
   return (
@@ -46,10 +47,10 @@ export const Footer = () => {
               href="mailto:ceosiif@sjcetpalai.ac.in"
               className="text-[clamp(14px,1.5vw,20px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#C41E3A] font-hanken underline decoration-[#C41E3A] underline-offset-4 whitespace-nowrap"
             >
-              ceosiif@sjcetpalai.ac.in
+              <Mail aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} />ceosiif@sjcetpalai.ac.in
             </Link>
             <span className="text-[clamp(16px,1.5vw,20px)] font-semibold leading-[115.967%] tracking-[-0.04em] text-[#565555] font-hanken">
-              Ph: +91 9447233663
+              <Phone aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} />Ph: +91 9447233663
             </span>
             <span className="text-[clamp(14px,1.2vw,18px)] font-semibold leading-[1.4] tracking-[-0.04em] text-[#565555] font-hanken">
               SJCET Innovation and Incubation Foundation (SIIF)

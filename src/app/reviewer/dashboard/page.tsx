@@ -1,5 +1,10 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+import { ClipboardList, LogOut } from '@/components/icons/glyphs';
+
+import { ActionIcon, DashboardIcon, ModuleIcon } from '@/components/icons/icon';
+
 import { useEffect, useState, useCallback } from 'react';
 import { database, getSafeSession } from '@/lib/database';
 import { useRouter } from 'next/navigation';
@@ -90,7 +95,7 @@ export default function ReviewerDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}>Loading…</p>
+        <p style={{ fontFamily: '"Hanken Grotesk", sans-serif', color: '#4A4A4A' }}><FeedbackIcon kind="loading" />Loading…</p>
       </div>
     );
   }
@@ -112,7 +117,8 @@ export default function ReviewerDashboard() {
       <div className="bg-[#F5F6F7] border-b border-gray-200 p-6">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold" style={{ color: '#FF3B3B' }}>
+            <h1 className="flex items-center gap-3 text-3xl font-bold" style={{ color: '#FF3B3B' }}>
+              <ModuleIcon icon={ClipboardList} palette="innovation" />
               My Reviews
             </h1>
             <p style={{ color: '#8A8A8A', fontSize: '14px', marginTop: '4px' }}>
@@ -123,7 +129,7 @@ export default function ReviewerDashboard() {
             onClick={handleLogout}
             className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm font-semibold"
           >
-            Logout
+            <LogOut aria-hidden="true" className="mr-1.5 inline size-4 align-middle" strokeWidth={1.75} />Logout
           </button>
         </div>
       </div>
@@ -134,18 +140,20 @@ export default function ReviewerDashboard() {
             className="mb-6 p-4 rounded-lg text-sm"
             style={{ backgroundColor: '#FFE5E5', color: '#D32F2F' }}
           >
+            <FeedbackIcon kind="error" />
             {error}
           </div>
         )}
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          {[
-            { label: 'Pending', value: stats.pending, color: '#FFA726' },
-            { label: 'In Progress', value: stats.in_progress, color: '#2AA0D3' },
-            { label: 'Completed', value: stats.completed, color: '#4CAF50' },
-          ].map(({ label, value, color }) => (
+          {([
+            { label: 'Pending', value: stats.pending, color: '#FFA726', artwork: 'applications' },
+            { label: 'In Progress', value: stats.in_progress, color: '#2AA0D3', artwork: 'reports' },
+            { label: 'Completed', value: stats.completed, color: '#4CAF50', artwork: 'directory' },
+          ] as const).map(({ label, value, color, artwork }) => (
             <Card key={label} className="border-0 shadow p-5 text-center">
+              <DashboardIcon artwork={artwork} palette="general" />
               <p
                 style={{
                   fontSize: '12px',
@@ -166,7 +174,7 @@ export default function ReviewerDashboard() {
 
         {/* Filter */}
         <div className="flex items-center gap-3 mb-4">
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#4A4A4A' }}>Filter:</span>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#4A4A4A' }}><ActionIcon name="filter" />Filter:</span>
           {['all', 'pending', 'in_progress', 'completed'].map((s) => (
             <button
               key={s}
@@ -193,7 +201,7 @@ export default function ReviewerDashboard() {
             className="text-center py-16"
             style={{ color: '#8A8A8A', fontSize: '14px' }}
           >
-            No applications to show.
+            <FeedbackIcon kind="empty" />No applications to show.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -235,6 +243,7 @@ export default function ReviewerDashboard() {
                   href={`/reviewer/applications/${a.application_id}`}
                   className="inline-block w-full text-center py-2 bg-[#FF3B3B] text-white rounded-lg hover:bg-red-700 transition-all text-sm font-semibold"
                 >
+                  <ActionIcon name="view" />
                   {a.review_status === 'completed' ? 'View / Edit Review' : 'Start Review'}
                 </a>
               </Card>

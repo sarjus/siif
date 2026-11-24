@@ -1,4 +1,8 @@
 'use client';
+
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -38,18 +42,18 @@ export default function StaffPaymentsReportPage() {
   const handleExportCsv = () => exportCsv('staff-payments-report.csv', ['Payment No.', 'Staff', 'Designation', 'Type', 'Month', 'Amount', 'Date', 'Mode', 'Reference'], rows);
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell title="Staff Payments Report" subtitle="Salary and honorarium disbursements to staff" userEmail={userEmail} onLogout={handleLogout}
-      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]">Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white">Export PDF</button></div>}>
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
+      headerActions={<div className="flex gap-2"><button onClick={handleExportCsv} className="rounded-lg border border-[#2AA0D3] px-4 py-2 text-sm font-semibold text-[#2AA0D3]"><ActionIcon name="export" />Export Excel</button><button onClick={handleExportPdf} className="rounded-lg bg-[#FF3B3B] px-4 py-2 text-sm font-semibold text-white"><ActionIcon name="export" />Export PDF</button></div>}>
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
       <div className="mb-6"><Card className="border-0 shadow p-5 inline-block"><p className="text-xs font-bold uppercase text-[#8A8A8A]">Total Disbursed</p><p className="text-2xl font-bold text-[#7C3AED]">{formatCurrency(total)}</p></Card></div>
       <Card className="border-0 shadow overflow-hidden">
         <div className="overflow-x-auto"><table className="w-full">
           <thead><tr style={{ backgroundColor: '#F5F6F7' }}>{['Payment No.', 'Staff Name', 'Designation', 'Type', 'Month', 'Amount', 'Date', 'Mode', 'Reference'].map((h) => <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-[#4A4A4A]">{h}</th>)}</tr></thead>
           <tbody>
-            {rows.length === 0 ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No payments recorded.</td></tr> : rows.map((row, i) => <tr key={i} className="border-t border-gray-200">{row.map((cell, j) => <td key={j} className={`px-4 py-3 text-sm ${j === 5 ? 'font-bold text-[#7C3AED]' : 'text-[#4A4A4A]'}`}>{cell}</td>)}</tr>)}
+            {rows.length === 0 ? <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No payments recorded.</td></tr> : rows.map((row, i) => <tr key={i} className="border-t border-gray-200">{row.map((cell, j) => <td key={j} className={`px-4 py-3 text-sm ${j === 5 ? 'font-bold text-[#7C3AED]' : 'text-[#4A4A4A]'}`}>{cell}</td>)}</tr>)}
             <tr className="border-t-2 border-[#172033] bg-[#F5F6F7]"><td colSpan={5} className="px-4 py-3 text-sm font-bold">TOTAL</td><td className="px-4 py-3 text-sm font-bold text-[#7C3AED]">{formatCurrency(total)}</td><td colSpan={3} /></tr>
           </tbody>
         </table></div>

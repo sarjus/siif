@@ -1,5 +1,9 @@
 'use client';
 
+import { FeedbackIcon } from '@/components/icons/feedback';
+
+import { ActionIcon } from '@/components/icons/icon';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { database, getSafeSession, getAuthHeaders } from '@/lib/database';
@@ -66,7 +70,7 @@ export default function AdminConferencePage() {
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const handleLogout = async () => { await database.auth.signOut(); router.push('/login'); };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><FeedbackIcon kind="loading" />Loading...</div>;
 
   return (
     <AdminShell
@@ -82,8 +86,8 @@ export default function AdminConferencePage() {
         ) : undefined
       }
     >
-      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]">{error}</div>}
-      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]">{notice}</div>}
+      {error && <div className="mb-4 rounded-lg bg-[#FFE5E5] p-4 text-sm text-[#D32F2F]"><FeedbackIcon kind="error" />{error}</div>}
+      {notice && <div className="mb-4 rounded-lg bg-[#EAF9F0] p-4 text-sm font-semibold text-[#1E7F46]"><FeedbackIcon kind="success" />{notice}</div>}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-2 border-b border-[#E3E7EE]">
@@ -116,7 +120,7 @@ export default function AdminConferencePage() {
               </thead>
               <tbody>
                 {bookings.filter((b) => b.status !== 'cancelled').length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[#8A8A8A]">No booking requests yet.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[#8A8A8A]"><FeedbackIcon kind="empty" />No booking requests yet.</td></tr>
                 ) : bookings.filter((b) => b.status !== 'cancelled').sort((a, b) => {
                   // pending first
                   if (a.status === 'pending' && b.status !== 'pending') return -1;
@@ -139,18 +143,18 @@ export default function AdminConferencePage() {
                       {b.status === 'pending' && (
                         <div className="flex gap-2">
                           <button onClick={() => handleAction(b.id, 'approve')} disabled={processing}
-                            className="rounded-lg bg-[#16A34A] px-3 py-1 text-xs font-semibold text-white hover:bg-[#15803D] disabled:opacity-50">
+                            className="rounded-lg bg-[#16A34A] px-3 py-1 text-xs font-semibold text-white hover:bg-[#15803D] disabled:opacity-50"><ActionIcon name="approve" />
                             Approve
                           </button>
                           <button onClick={() => { setSelected(b); setRejectionReason(''); }}
-                            className="rounded-lg border border-[#DC2626] px-3 py-1 text-xs font-semibold text-[#DC2626] hover:bg-[#FFE5E5]">
+                            className="rounded-lg border border-[#DC2626] px-3 py-1 text-xs font-semibold text-[#DC2626] hover:bg-[#FFE5E5]"><ActionIcon name="reject" />
                             Reject
                           </button>
                         </div>
                       )}
                       {b.status === 'approved' && (
                         <button onClick={() => handleAction(b.id, 'cancel')} disabled={processing}
-                          className="rounded-lg border border-[#9CA3AF] px-3 py-1 text-xs font-semibold text-[#9CA3AF] hover:bg-[#F8FAFC] disabled:opacity-50">
+                          className="rounded-lg border border-[#9CA3AF] px-3 py-1 text-xs font-semibold text-[#9CA3AF] hover:bg-[#F8FAFC] disabled:opacity-50"><ActionIcon name="cancel" />
                           Cancel
                         </button>
                       )}
@@ -169,7 +173,7 @@ export default function AdminConferencePage() {
           <Card className="w-full max-w-md border-0 shadow-2xl p-6 bg-white">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#172033]">{selected.title}</h3>
-              <button onClick={() => setSelected(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl">✕</button>
+              <button onClick={() => setSelected(null)} className="text-[#8A8A8A] hover:text-[#344054] text-xl" title="Close" aria-label="Close"><ActionIcon name="close" /></button>
             </div>
             <div className="mb-4 space-y-2 text-sm text-[#4A4A4A]">
               <p><span className="font-semibold">Company:</span> {selected.applications?.business_name || '-'}</p>
@@ -187,11 +191,11 @@ export default function AdminConferencePage() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => handleAction(selected.id, 'approve')} disabled={processing}
-                    className="flex-1 rounded-lg bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#15803D] disabled:opacity-50">
+                    className="flex-1 rounded-lg bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#15803D] disabled:opacity-50"><ActionIcon name="approve" />
                     {processing ? '...' : 'Approve'}
                   </button>
                   <button onClick={() => handleAction(selected.id, 'reject')} disabled={processing}
-                    className="flex-1 rounded-lg bg-[#DC2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#B91C1C] disabled:opacity-50">
+                    className="flex-1 rounded-lg bg-[#DC2626] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#B91C1C] disabled:opacity-50"><ActionIcon name="reject" />
                     {processing ? '...' : 'Reject'}
                   </button>
                 </div>
